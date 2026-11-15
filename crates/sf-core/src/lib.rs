@@ -12,13 +12,16 @@
 //!   expressions.
 //! * [`engine`] - compiles a configuration document into a [`engine::Pipeline`]
 //!   that processes planar audio blocks.
-//! * [`wav`] - minimal RIFF/WAVE reader used for convolution impulse responses.
+//! * [`wav`] - minimal RIFF/WAVE reader for WAVE impulse responses.
+//! * [`ir`] - impulse response loading for WAVE, FLAC, Ogg/Vorbis, raw float
+//!   and text files.
 
 pub mod config;
 pub mod control;
 pub mod device;
 pub mod dsp;
 pub mod engine;
+pub mod ir;
 pub mod wav;
 
 pub use engine::{CompileOptions, CompiledChain, Stage};

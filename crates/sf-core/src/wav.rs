@@ -1,9 +1,8 @@
 //! Minimal RIFF/WAVE reader and writer used for impulse responses.
 //!
 //! Supported input: PCM 8/16/24/32-bit, IEEE float 32/64-bit, and
-//! `WAVE_FORMAT_EXTENSIBLE` wrappers around those formats. Other container
-//! formats supported by the reference implementation (FLAC, Ogg, ...) are not
-//! supported yet and produce a clear diagnostic instead of silent silence.
+//! `WAVE_FORMAT_EXTENSIBLE` wrappers around those formats. FLAC, Ogg/Vorbis,
+//! raw float and text impulse responses are handled by [`crate::ir`].
 
 use std::fs::File;
 use std::io::{BufWriter, Read, Write};
@@ -48,6 +47,7 @@ pub enum WavError {
     Io(std::io::Error),
     Invalid(String),
     Unsupported(String),
+    Codec(String),
 }
 
 impl std::fmt::Display for WavError {
@@ -56,6 +56,7 @@ impl std::fmt::Display for WavError {
             WavError::Io(e) => write!(f, "I/O error: {e}"),
             WavError::Invalid(m) => write!(f, "invalid WAVE file: {m}"),
             WavError::Unsupported(m) => write!(f, "unsupported audio format: {m}"),
+            WavError::Codec(m) => write!(f, "cannot decode {m}"),
         }
     }
 }
@@ -133,7 +134,7 @@ pub fn parse_wave(data: &[u8]) -> Result<WaveAudio, WavError> {
         return Err(WavError::Invalid("zero sample rate".into()));
     }
     let channels = channels as usize;
-    let bytes_per_sample = (bits as usize + 7) / 8;
+    let bytes_per_sample = (bits as usize).div_ceil(8);
     if bytes_per_sample == 0 {
         return Err(WavError::Invalid("zero bit depth".into()));
     }
@@ -185,9 +186,9 @@ pub fn parse_wave(data: &[u8]) -> Result<WaveAudio, WavError> {
 
     for frame in 0..frames {
         let base = frame * frame_bytes;
-        for ch in 0..channels {
+        for (ch, channel) in out.iter_mut().enumerate() {
             let start = base + ch * bytes_per_sample;
-            out[ch].push(decode(&payload[start..start + bytes_per_sample]));
+            channel.push(decode(&payload[start..start + bytes_per_sample]));
         }
     }
 
