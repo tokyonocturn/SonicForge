@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.1.0 - unreleased
+
+### Added
+
+* Core engine: biquads, 6/12 dB and slope-configurable shelves, arbitrary IIR, graphic EQ
+  with iterative gain refinement, uniformly partitioned FFT convolution, fractional delay,
+  channel routing with virtual channels, preamp and gain stages.
+* Equalizer APO configuration language: all filter types, `GraphicEQ`, `Convolution`,
+  `Copy`, `Channel`, `Delay`, `Device`, `Stage`, `Include`, `If`/`ElseIf`/`Else`/`EndIf`,
+  `Eval`, inline backtick expressions, a full expression language with regex support.
+* Windows APO: in-proc COM server with explicit vtables, real-time safe processing,
+  off-thread reload watcher, shared-memory control block for bypass and master trim.
+* Platform layer: WASAPI endpoint enumeration, per-endpoint APO registration with backup
+  and restore of the previous effect chain, rolling logs, configuration layout.
+* Editor: response graph computed by the real engine, draggable bands, double-click to
+  add, band table, presets, raw configuration editing, live diagnostics, device list,
+  bypass and master preamp.
+* Tray application: open editor, bypass, reload, log folder, exit.
+* Installer: `sf-setup install/uninstall/status` plus an Inno Setup script.
+* CLI: devices, validate, render, apo install/enable/disable/status/self-test, config
+  path/show/import/export, presets, diagnose with bundle output.
+* CI: build and test on Windows and Linux, clippy on the core crate, release packaging.
+
+### Not implemented
+
+* VST2 plugin hosting (the configuration command is rejected with a diagnostic).
+* `LoudnessCorrection` (reported as a warning).
+* FLAC/Ogg impulse responses (WAVE only).
+
+
 All notable changes to SonicForge are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).

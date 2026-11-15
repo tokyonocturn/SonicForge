@@ -1,0 +1,23 @@
+[package]
+name = "sf-setup"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "SonicForge installer and uninstaller"
+
+[[bin]]
+name = "sf-setup"
+path = "src/main.rs"
+
+[dependencies]
+sf-core = { workspace = true }
+sf-win = { workspace = true }
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.58", features = [
+    "Win32_Foundation",
+    "Win32_System_Registry",
+] }

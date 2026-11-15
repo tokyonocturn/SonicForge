@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  test:
+    name: Build and test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Formatting
+        if: matrix.os == 'ubuntu-latest'
+        run: cargo fmt --all -- --check
+
+      - name: Clippy (core only)
+        run: cargo clippy -p sf-core --all-targets -- -D warnings
+
+      - name: Tests
+        run: cargo test -p sf-core -p sf-win --all-targets
+
+      - name: Build workspace
+        run: cargo build --workspace
+
+      - name: APO self-test
+        if: matrix.os == 'windows-latest'
+        run: |
+          cargo build -p sf-apo -p sf-cli
+          ./target/debug/sonicforge.exe apo self-test
+
+      - name: Render check
+        if: matrix.os == 'windows-latest'
+        run: |
+          cargo run -p sf-cli -- presets list
+
+  package:
+    name: Package Windows binaries
+    runs-on: windows-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build release
+        run: cargo build --release --workspace
+
+      - name: Stage artifacts
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item target/release/SonicForgeAPO.dll dist/
+          Copy-Item target/release/sonicforge.exe dist/
+          Copy-Item target/release/sonicforge-editor.exe dist/
+          Copy-Item target/release/sonicforge-tray.exe dist/
+          Copy-Item target/release/sf-setup.exe dist/
+          Copy-Item LICENSE, NOTICE, README.md, CHANGELOG.md dist/
+          Compress-Archive -Path dist/* -DestinationPath SonicForge-windows-x64.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SonicForge-windows-x64
+          path: SonicForge-windows-x64.zip
+          retention-days: 30

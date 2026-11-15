@@ -5,6 +5,9 @@ members = [
     "crates/sf-win",
     "crates/sf-apo",
     "crates/sf-cli",
+    "crates/sf-gui",
+    "crates/sf-tray",
+    "crates/sf-setup",
 ]
 
 [workspace.package]

@@ -20,14 +20,14 @@ is updated with every release.
 
 | Area | State |
 | --- | --- |
-| DSP core (biquads, shelves, IIR, graphic EQ, convolution, delay, channel mix) | **Working**, 120 unit tests |
+| DSP core (biquads, shelves, IIR, graphic EQ, convolution, delay, channel mix) | **Working**, 145 unit tests |
 | Equalizer APO configuration parser + compiler | **Working** (`Preamp`, `Filter`, `GraphicEQ`, `Convolution`, `Delay`, `Copy`, `Channel`, `Device`, `Stage`, `Include`, `If`/`ElseIf`/`Else`/`EndIf`, `Eval`, inline expressions) |
 | Expression language | **Working** (arithmetic, comparison, ternary, arrays, string ops, regex, registry reads) |
 | WAVE impulse-response loading | **Working** (PCM 8/16/24/32, float 32/64, extensible) |
 | System-wide APO | **Implemented** (`IAudioProcessingObject` in-proc COM server, per-endpoint registration) |
-| GUI editor | **Working** (device list, live graph, draggable bands, presets, text editor) |
+| GUI editor | **Built and launchable** (device list, live graph, draggable bands, presets, text editor) |
 | Command line tools | **Working** (devices, validate, render, install, diagnose) |
-| Installer | **Working** (`sf-setup`, plus an Inno Setup script for a signed distribution) |
+| Installer | **Working** (`sf-setup`, plus `packaging/installer.iss` for an Inno Setup build) |
 | Tray application | **Working** (bypass, reload, open editor, exit) |
 | VST2 plugin hosting | **Not implemented** — the configuration command is rejected with an explicit diagnostic instead of silently doing nothing |
 | `LoudnessCorrection` | **Not implemented** — reported as a warning |
@@ -71,7 +71,7 @@ and line number, and the editor shows it.
 
 ### Audio path
 
-The APO runs in the real-time audio thread, so it never allocates, locks, reads files or
+The APO runs in the real-time audio thread, so it never allocates, blocks, reads files or
 logs while processing. It owns one prebuilt [`Pipeline`] per stream and swaps in a newly
 compiled pipeline between blocks when the configuration generation changes. Live
 adjustments (bypass, master preamp) travel through a memory-mapped control block that the
@@ -132,8 +132,12 @@ SonicForge reads Equalizer APO style configuration files. The default locations 
 
 ```
 %APPDATA%\SonicForge\config\config.txt
-%APPDATA%\SonicForge\config\<device-id>.txt   (optional per-device override)
+%APPDATA%\SonicForge\config\*.txt   (Include: targets)
+%APPDATA%\SonicForge\config\*.wav   (Convolution: impulse responses)
 ```
+
+Independent per-device chains are expressed with `Device:` lines inside the configuration,
+matched against the endpoint friendly name.
 
 Example:
 
