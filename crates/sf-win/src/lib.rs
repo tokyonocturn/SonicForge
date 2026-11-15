@@ -8,6 +8,12 @@
 //!   including backup/restore of the previous effect chain.
 //! * [`paths`] — configuration, log and preset locations.
 //! * [`logging`] — small rolling file logger used by all user facing binaries.
+//!
+//! This crate is Windows-only by construction: on other targets it compiles to
+//! an empty library so that `sf-core` (and its tests) still build anywhere,
+//! while CI lints and tests the real platform layer on Windows.
+
+#![cfg(windows)]
 
 pub mod apo;
 pub mod endpoints;
