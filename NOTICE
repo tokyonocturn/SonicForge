@@ -1,0 +1,38 @@
+SonicForge
+==========
+
+SonicForge is an independent, from-scratch implementation of a system-wide audio
+processor for Windows. It is not a fork of Equalizer APO and contains no Equalizer APO
+source code.
+
+Equalizer APO
+-------------
+
+The configuration file format and the user-visible behaviour that SonicForge reimplements
+were derived from the publicly documented Equalizer APO configuration reference and from
+observing the released application.
+
+    Equalizer APO
+    Copyright (C) 2014 Jonas Thedering and contributors
+    Licensed under the GNU General Public License, version 2 (or later)
+    https://sourceforge.net/projects/equalizerapo/
+
+The Equalizer APO project is licensed under GPL-2.0. SonicForge is licensed under
+GPL-2.0-or-later, so configuration files, presets and documentation written for Equalizer
+APO remain compatible and can be shared freely between the two projects.
+
+Filter design formulae follow the Audio EQ Cookbook by Robert Bristow-Johnson, which is
+public domain reference material.
+
+Third-party Rust crates
+-----------------------
+
+SonicForge uses the following crates; their licences are compatible with GPL-2.0-or-later:
+
+  * egui / eframe — MIT OR Apache-2.0
+  * windows / windows-sys — MIT OR Apache-2.0
+  * serde, serde_json — MIT OR Apache-2.0
+  * regex — MIT OR Apache-2.0
+  * tempfile (tests only) — MIT OR Apache-2.0
+
+See `Cargo.lock` for the exact dependency set of a build.

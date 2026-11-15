@@ -1,0 +1,31 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/sf-core",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.80"
+license = "GPL-2.0-or-later"
+authors = ["SonicForge contributors"]
+repository = "https://github.com/tokyonocturn/sonicforge"
+description = "SonicForge - a modern, open-source system-wide audio processor for Windows"
+
+[workspace.dependencies]
+sf-core = { path = "crates/sf-core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+regex = "1"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = "debuginfo"
+
+[profile.bench]
+opt-level = 3
+debug = true
