@@ -226,12 +226,15 @@ impl ApoEngine {
             }
         }
 
-        // Interleaved -> planar.
-        for frame in 0..frames {
-            let base = frame * channels;
-            for ch in 0..pipeline_channels {
-                let value = if ch < channels { io[base + ch] } else { 0.0 };
-                self.planar[ch][frame] = value;
+        // Interleaved -> planar. Iterator based and allocation free: this runs
+        // on the audio thread for every block.
+        for (frame, frame_samples) in io.chunks_exact(channels).take(frames).enumerate() {
+            for (ch, channel) in self.planar.iter_mut().take(pipeline_channels).enumerate() {
+                channel[frame] = if ch < channels {
+                    frame_samples[ch]
+                } else {
+                    0.0
+                };
             }
         }
 
@@ -245,10 +248,9 @@ impl ApoEngine {
         };
 
         // Planar -> interleaved. Channels beyond the device layout are dropped.
-        for frame in 0..frames {
-            let base = frame * channels;
-            for ch in 0..channels {
-                io[base + ch] = self.planar[ch][frame] * gain;
+        for (frame, frame_samples) in io.chunks_exact_mut(channels).take(frames).enumerate() {
+            for (ch, sample) in frame_samples.iter_mut().enumerate() {
+                *sample = self.planar[ch][frame] * gain;
             }
         }
     }
