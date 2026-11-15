@@ -420,12 +420,7 @@ fn parse_copy_expression(expr: &str) -> Result<Vec<CopyTerm>, String> {
                     let value = parse_gain(factor).ok_or_else(|| format!("bad gain '{factor}'"))?;
                     sign * value
                 };
-                let signed = if trimmed.ends_with("db") {
-                    1.0f32
-                } else {
-                    1.0f32
-                };
-                (gain * signed, source)
+                (gain, source)
             }
             None => (sign * 1.0f32, body.as_str()),
         };

@@ -81,11 +81,11 @@ mod tests {
             let input: Vec<f32> = (0..256).map(|i| i as f32).collect();
             let mut buf = input.clone();
             line.process(&mut buf);
-            for i in delay..256 {
-                assert_eq!(buf[i], input[i - delay], "delay {delay} at {i}");
+            for (i, value) in buf.iter().enumerate().skip(delay) {
+                assert_eq!(*value, input[i - delay], "delay {delay} at {i}");
             }
-            for i in 0..delay {
-                assert_eq!(buf[i], 0.0);
+            for value in buf.iter().take(delay) {
+                assert_eq!(*value, 0.0);
             }
         }
     }

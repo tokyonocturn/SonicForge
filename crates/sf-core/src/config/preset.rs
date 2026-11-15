@@ -281,9 +281,11 @@ mod tests {
 
     #[test]
     fn parsed_preset_round_trips_through_text() {
-        let mut preset = Preset::default();
-        preset.preamp_db = -3.5;
-        preset.bands.push(PresetBand::peak(1000.0, 4.5, 1.41));
+        let preset = Preset::new(
+            "Round trip",
+            -3.5,
+            vec![PresetBand::peak(1000.0, 4.5, 1.41)],
+        );
         let text = preset.to_config_text();
         let parsed = Preset::from_document(&Document::parse(&text));
         assert_eq!(parsed.bands.len(), 1);

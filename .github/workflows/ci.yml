@@ -33,15 +33,18 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: cargo fmt --all -- --check
 
-      - name: Clippy (core only, advisory)
-        # Lints are reported but do not fail the build: the DSP suite and the
-        # APO self-test are the gates, and style lints are fixed separately.
-        run: cargo clippy -p sf-core --all-targets
+      - name: Clippy
+        # A real gate: warnings are errors for the portable engine and the
+        # platform layer, on both Windows and Linux.
+        run: cargo clippy -p sf-core -p sf-win --all-targets -- -D warnings
 
       - name: Tests
+        # Windows-only crates are built by the build step below; the portable
+        # engine and platform layer are tested on both runners.
         run: cargo test -p sf-core -p sf-win --all-targets
 
       - name: Build workspace
+        if: matrix.os == 'windows-latest'
         run: cargo build --workspace
 
       - name: APO self-test

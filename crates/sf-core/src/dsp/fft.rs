@@ -5,6 +5,7 @@
 //! is shipped here rather than pulling in a heavy dependency.
 
 use std::f64::consts::PI;
+use std::ops::{Add, Mul, Sub};
 
 /// Double precision complex number.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -13,30 +14,39 @@ pub struct Complex64 {
     pub im: f64,
 }
 
+impl Add for Complex64 {
+    type Output = Complex64;
+    #[inline]
+    fn add(self, other: Self) -> Self::Output {
+        Self::new(self.re + other.re, self.im + other.im)
+    }
+}
+
+impl Sub for Complex64 {
+    type Output = Complex64;
+    #[inline]
+    fn sub(self, other: Self) -> Self::Output {
+        Self::new(self.re - other.re, self.im - other.im)
+    }
+}
+
+impl Mul for Complex64 {
+    type Output = Complex64;
+    #[inline]
+    fn mul(self, other: Self) -> Self::Output {
+        Self::new(
+            self.re * other.re - self.im * other.im,
+            self.re * other.im + self.im * other.re,
+        )
+    }
+}
+
 impl Complex64 {
     pub const ZERO: Complex64 = Complex64 { re: 0.0, im: 0.0 };
 
     #[inline]
     pub const fn new(re: f64, im: f64) -> Self {
         Self { re, im }
-    }
-
-    #[inline]
-    pub fn add(self, other: Self) -> Self {
-        Self::new(self.re + other.re, self.im + other.im)
-    }
-
-    #[inline]
-    pub fn sub(self, other: Self) -> Self {
-        Self::new(self.re - other.re, self.im - other.im)
-    }
-
-    #[inline]
-    pub fn mul(self, other: Self) -> Self {
-        Self::new(
-            self.re * other.re - self.im * other.im,
-            self.re * other.im + self.im * other.re,
-        )
     }
 
     #[inline]

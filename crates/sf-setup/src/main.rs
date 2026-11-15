@@ -173,7 +173,7 @@ mod windows_impl {
             ("DisplayVersion", sf_core::VERSION.to_string()),
             ("Publisher", "SonicForge contributors".to_string()),
             ("InstallLocation", target.display().to_string()),
-            ("UninstallString", format!("sf-setup.exe uninstall")),
+            ("UninstallString", "sf-setup.exe uninstall".to_string()),
             ("NoModify", "1".to_string()),
         ];
         let _ = uninstaller;

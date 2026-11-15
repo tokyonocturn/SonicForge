@@ -2,6 +2,7 @@
 
 use super::fft::Complex64;
 use std::f64::consts::PI;
+use std::ops::Add;
 
 /// A normalised biquad: `(b0 + b1 z^-1 + b2 z^-2) / (1 + a1 z^-1 + a2 z^-2)`.
 #[derive(Clone, Copy, Debug, PartialEq)]

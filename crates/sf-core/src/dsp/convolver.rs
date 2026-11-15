@@ -10,6 +10,7 @@
 //! block before it can produce the corresponding output block.
 
 use super::fft::{Complex64, RealFft};
+use std::ops::{Add, Mul};
 
 /// Default partition size. 512 samples is 10.7 ms at 48 kHz.
 pub const DEFAULT_BLOCK: usize = 512;

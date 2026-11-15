@@ -23,11 +23,30 @@
   path/show/import/export, presets, diagnose with bundle output.
 * CI: build and test on Windows and Linux, clippy on the core crate, release packaging.
 
+### Impulse responses
+
+* `Convolution:` loads WAVE, FLAC, Ogg/Vorbis, raw float32/float64 and text
+  impulse responses through `sf-core::ir`, which stays free of Windows APIs.
+  Cross-format tests store one synthetic IR in every container and prove the
+  measured frequency response matches the WAVE original: sample exact for
+  lossless formats, under 1 dB in band and 0.3 dB RMS for Vorbis.
+* Raw float and text files can declare their sample rate; an IR whose rate does
+  not match the device is still rejected with a diagnostic.
+
+### Loudness correction
+
+* `LoudnessCorrection: State <0|1> ReferenceLevel <dB> [ReferenceOffset <dB>]
+  [Attenuation <0..1>]` is implemented instead of warned about. It applies a
+  75 Hz low shelf, a 10 kHz high shelf and a matching headroom cut derived from
+  the distance below the reference volume, scaled by `Attenuation`.
+* The listening volume comes from the default playback endpoint (read off the
+  audio thread) and travels to the compiler in `CompileOptions::volume_db`.
+  Tests cover the gain at each volume, the neutral point, offsets, attenuation
+  and malformed input.
+
 ### Not implemented
 
 * VST2 plugin hosting (the configuration command is rejected with a diagnostic).
-* `LoudnessCorrection` (reported as a warning).
-* FLAC/Ogg impulse responses (WAVE only).
 
 
 All notable changes to SonicForge are documented here.

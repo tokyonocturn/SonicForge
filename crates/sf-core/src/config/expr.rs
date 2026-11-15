@@ -298,28 +298,18 @@ impl<'a> Parser<'a> {
         false
     }
 
-    fn expect_op(&mut self, op: &str) -> EvalResult<()> {
-        if self.eat_op(op) {
-            Ok(())
-        } else {
-            err(format!("expected '{op}'"))
-        }
-    }
-
     fn parse_sequence(&mut self) -> EvalResult<Value> {
-        let mut last = Value::Float(0.0);
         loop {
-            last = self.parse_assignment()?;
+            let value = self.parse_assignment()?;
             if matches!(self.peek(), Token::Semi) {
                 self.next();
                 if matches!(self.peek(), Token::End) {
-                    break;
+                    return Ok(value);
                 }
                 continue;
             }
-            break;
+            return Ok(value);
         }
-        Ok(last)
     }
 
     fn parse_assignment(&mut self) -> EvalResult<Value> {
@@ -1068,7 +1058,7 @@ mod tests {
 
     #[test]
     fn documented_examples_evaluate() {
-        assert_eq!(eval("sin(0)^2 + cos(0)^2 == 1").as_bool(), true);
+        assert!(eval("sin(0)^2 + cos(0)^2 == 1").as_bool());
     }
 
     #[test]

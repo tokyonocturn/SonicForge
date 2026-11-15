@@ -462,7 +462,7 @@ mod tests {
     fn bandwidth_in_octaves_matches_q_conversion() {
         // 1 octave bandwidth == Q of about 1.414 at mid frequencies.
         let q = Bandwidth::Octaves(1.0).to_q(1000.0, FS);
-        assert!((q - 1.4142).abs() < 0.02, "Q = {q}");
+        assert!((q - std::f64::consts::SQRT_2).abs() < 0.02, "Q = {q}");
     }
 
     #[test]

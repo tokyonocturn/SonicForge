@@ -30,8 +30,8 @@ is updated with every release.
 | Installer | **Working** (`sf-setup`, plus `packaging/installer.iss` for an Inno Setup build) |
 | Tray application | **Working** (bypass, reload, open editor, exit) |
 | VST2 plugin hosting | **Not implemented** — the configuration command is rejected with an explicit diagnostic instead of silently doing nothing |
-| `LoudnessCorrection` | **Not implemented** — reported as a warning |
-| FLAC/Ogg impulse responses | **Not implemented** — WAVE only; other formats are rejected with a clear message |
+| `LoudnessCorrection` | **Working** (volume-dependent 75 Hz / 10 kHz shelves plus headroom, tested at each reference volume) |
+| Impulse responses | **Working** for WAVE, FLAC, Ogg/Vorbis, raw float32/64 and text, all through `sf-core::ir` with cross-format response tests |
 
 Unsupported features never fail silently: the compiler reports a diagnostic with the file
 and line number, and the editor shows it.

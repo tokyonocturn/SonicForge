@@ -69,10 +69,38 @@ Convolution: room.wav   # WAVE impulse response at the device sample rate
 Preamp: -3 dB
 ```
 
-Convolution supports PCM 8/16/24/32-bit and float 32/64-bit WAVE files. An impulse
-response whose sample rate differs from the device is rejected with a diagnostic rather
-than silently resampled. The partition size is 512 samples, so latency is one block
-(about 10.7 ms at 48 kHz) and is reported by `sonicforge diagnose` and in the editor.
+Convolution loads the same formats Equalizer APO users tend to have on disk:
+
+| File | Format |
+| --- | --- |
+| `.wav` | PCM 8/16/24/32-bit, float 32/64-bit, `WAVE_FORMAT_EXTENSIBLE` |
+| `.flac` | FLAC, any supported bit depth |
+| `.ogg` | Ogg/Vorbis (lossy) |
+| `.f32`, `.raw`, `.pcm` | raw little endian float32, mono, 48 kHz |
+| `.f64` | raw little endian float64, mono, 48 kHz |
+| `.txt`, `.csv`, `.ir` | text samples, `#` comments, optional `sample_rate 96000` line |
+
+An impulse response whose sample rate differs from the device is rejected with a
+diagnostic rather than silently resampled, because a resampled IR no longer matches the
+room or filter it was measured for. The partition size is 512 samples, so latency is one
+block (about 10.7 ms at 48 kHz) and is reported by `sonicforge diagnose` and in the
+editor.
+
+## Loudness correction
+
+```
+LoudnessCorrection: State 1 ReferenceLevel -20 ReferenceOffset 0 Attenuation 1.0
+```
+
+Compensates for the ear's reduced sensitivity to bass and treble at low listening
+levels. `ReferenceLevel` is the system volume, in dB, that produces the calibrated
+reference level in the room; `ReferenceOffset` moves that reference without repeating
+the calibration; `Attenuation` (0..1) scales the whole effect; `State 0` bypasses it.
+
+Below the reference the filter adds a 75 Hz low shelf of `0.5 * dB below reference`, a
+10 kHz high shelf of `0.25 * dB below reference`, and a headroom preamp of half their
+sum so the bass boost cannot clip. At or above the reference it is exactly neutral. The
+volume is read from the default playback endpoint.
 
 ## Device selection, stages and includes
 
