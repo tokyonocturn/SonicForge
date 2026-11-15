@@ -389,7 +389,13 @@ fn resolve_dll(explicit: Option<PathBuf>) -> Result<PathBuf, String> {
         return Err(format!("'{}' does not exist", path.display()));
     }
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
-    let candidate = exe.parent().map(|p| p.join("SonicForgeAPO.dll"));
+    // Cargo names the CDylib `sonicforge_apo.dll`; installations use the
+    // shipped name `SonicForgeAPO.dll`. Both are accepted here.
+    let candidate = exe
+        .parent()
+        .map(|dir| dir.join("SonicForgeAPO.dll"))
+        .filter(|path| path.exists())
+        .or_else(|| exe.parent().map(|dir| dir.join("sonicforge_apo.dll")));
     match candidate {
         Some(path) if path.exists() => Ok(path),
         Some(path) => Err(format!(

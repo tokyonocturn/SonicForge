@@ -50,7 +50,7 @@ must measure 6 dB ± 0.02 dB at its centre frequency; do not assert on coefficie
 * **Denormals:** filter state is sanitised after each block.
 * **No silent failures.** An unsupported feature must produce an error or warning
   diagnostic. Never accept a command and do nothing.
-* Formatting: `cargo fmt`, and `cargo clippy --all-targets -- -D warnings` must pass.
+* Formatting: `cargo fmt`, and `cargo clippy --workspace --all-targets -- -D warnings` must pass. CI runs that command on Windows and Linux; the Linux job excludes `sf-cli`, which needs the Windows APO registration API.
 * Prefer small, focused commits. Each commit must build and pass tests on its own.
 
 ## Testing

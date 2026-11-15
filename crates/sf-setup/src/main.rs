@@ -57,34 +57,39 @@ mod windows_impl {
         std::fs::create_dir_all(&target)
             .map_err(|e| format!("cannot create '{}': {e}", target.display()))?;
 
-        let files = [
-            "SonicForgeAPO.dll",
+        // Cargo names a CDylib after its library target (`sonicforge_apo`), while
+        // the audio engine and the registry entry expect `SonicForgeAPO.dll`.
+        // The installer is where that shipping name is pinned.
+        let apo_source = ["SonicForgeAPO.dll", "sonicforge_apo.dll"]
+            .iter()
+            .map(|name| source.join(name))
+            .find(|path| path.exists())
+            .ok_or_else(|| {
+                format!(
+                    "neither SonicForgeAPO.dll nor sonicforge_apo.dll is in '{}'; build the workspace first",
+                    source.display()
+                )
+            })?;
+        let apo_target = target.join("SonicForgeAPO.dll");
+        std::fs::copy(&apo_source, &apo_target)
+            .map_err(|e| format!("cannot copy '{}': {e}", apo_target.display()))?;
+
+        for name in [
             "sonicforge.exe",
             "sonicforge-editor.exe",
             "sonicforge-tray.exe",
-        ];
-        let mut copied_apo = None;
-        for name in files {
+        ] {
             let from = source.join(name);
             if !from.exists() {
-                if name == "SonicForgeAPO.dll" {
-                    return Err(format!(
-                        "'{}' is missing; build the workspace first",
-                        from.display()
-                    ));
-                }
                 println!("skipping missing {name}");
                 continue;
             }
             let to = target.join(name);
             std::fs::copy(&from, &to)
                 .map_err(|e| format!("cannot copy '{}': {e}", to.display()))?;
-            if name == "SonicForgeAPO.dll" {
-                copied_apo = Some(to);
-            }
         }
 
-        let dll = copied_apo.ok_or("the APO DLL was not installed")?;
+        let dll = apo_target;
         sf_win::apo::register_server(&dll)?;
         write_uninstall_entry(&target)?;
 
@@ -147,6 +152,7 @@ mod windows_impl {
 
         for name in [
             "SonicForgeAPO.dll",
+            "sonicforge_apo.dll",
             "sonicforge.exe",
             "sonicforge-editor.exe",
             "sonicforge-tray.exe",

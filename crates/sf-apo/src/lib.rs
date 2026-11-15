@@ -13,6 +13,14 @@
 //! blocks on a lock: it copies the input to the output buffer and processes it
 //! with `try_lock`, so a concurrent configuration reload simply results in one
 //! block of pass-through audio instead of a dropout.
+//!
+//! The crate is Windows-only by construction (it is a COM server), so on other
+//! targets it compiles to an empty library and the workspace still lints and
+//! tests on Linux. The shipping artefact name is `SonicForgeAPO.dll`: Cargo
+//! names the output after the library target, so the packaging steps in
+//! `sf-setup`, CI and `packaging/installer.iss` pin that name.
+
+#![cfg(windows)]
 
 pub mod engine;
 

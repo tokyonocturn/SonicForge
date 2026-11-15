@@ -9,7 +9,7 @@ repository.workspace = true
 description = "SonicForge Audio Processing Object for the Windows audio engine"
 
 [lib]
-name = "SonicForgeAPO"
+name = "sonicforge_apo"
 crate-type = ["cdylib"]
 
 [dependencies]

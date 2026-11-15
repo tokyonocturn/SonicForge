@@ -20,7 +20,7 @@
 use crate::engine::ApoEngine;
 use sf_core::control::ControlBlock;
 use sf_core::device::DeviceInfo;
-use sf_win::{APO_CLSID, APO_FRIENDLY_NAME};
+use sf_win::APO_FRIENDLY_NAME;
 use std::ffi::c_void;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU32, AtomicU64, AtomicUsize, Ordering};
@@ -32,7 +32,7 @@ use windows::Win32::Foundation::{
     E_OUTOFMEMORY, E_POINTER, S_FALSE, S_OK,
 };
 use windows::Win32::Media::Audio::Apo::{
-    APOInitBaseStruct, APOInitSystemEffects, IAudioMediaType, IAudioProcessingObject,
+    APOInitBaseStruct, APOInitSystemEffects, IAudioProcessingObject,
     IAudioProcessingObjectConfiguration, IAudioProcessingObjectRT, APO_CONNECTION_DESCRIPTOR,
     APO_CONNECTION_PROPERTY, APO_FLAG_DEFAULT, APO_REG_PROPERTIES,
 };
@@ -754,12 +754,3 @@ pub extern "system" fn DllUnregisterServer() -> HRESULT {
         }
     }
 }
-
-/// Convenience for diagnostics: the CLSID string used in the registry.
-pub fn clsid_string() -> &'static str {
-    APO_CLSID
-}
-
-/// The `IAudioMediaType` import documents the format negotiation API surface.
-#[allow(dead_code)]
-fn _format_type_marker(_: Option<&IAudioMediaType>) {}

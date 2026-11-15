@@ -28,7 +28,7 @@ UninstallDisplayIcon={app}\{#AppExe}
 LicenseFile=..\LICENSE
 
 [Files]
-Source: "..\target\release\SonicForgeAPO.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\target\release\sonicforge_apo.dll"; DestName: "SonicForgeAPO.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\target\release\sonicforge.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\target\release\sonicforge-editor.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\target\release\sonicforge-tray.exe"; DestDir: "{app}"; Flags: ignoreversion

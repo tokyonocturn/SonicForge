@@ -33,10 +33,22 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: cargo fmt --all -- --check
 
-      - name: Clippy
-        # A real gate: warnings are errors for the portable engine and the
-        # platform layer, on both Windows and Linux.
-        run: cargo clippy -p sf-core -p sf-win --all-targets -- -D warnings
+      - name: Install Linux GUI toolchain
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev
+
+      - name: Clippy (whole workspace, Windows)
+        if: matrix.os == 'windows-latest'
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Clippy (whole workspace, Linux)
+        # Same gate, minus `sf-cli`: the CLI drives Windows-only APO registration
+        # and its platform layer is empty off Windows. Everything else — engine,
+        # APO, editor, tray, installer — is linted here too.
+        if: matrix.os == 'ubuntu-latest'
+        run: cargo clippy --workspace --all-targets --exclude sf-cli -- -D warnings
 
       - name: Tests
         # Windows-only crates are built by the build step below; the portable
@@ -74,7 +86,8 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force dist | Out-Null
-          Copy-Item target/release/SonicForgeAPO.dll dist/
+          # Cargo names the CDylib after its lib target; pin the shipped name.
+          Copy-Item target/release/sonicforge_apo.dll dist/SonicForgeAPO.dll
           Copy-Item target/release/sonicforge.exe dist/
           Copy-Item target/release/sonicforge-editor.exe dist/
           Copy-Item target/release/sonicforge-tray.exe dist/

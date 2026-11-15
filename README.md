@@ -91,13 +91,17 @@ SDK), and Windows 10/11 x64.
 ```powershell
 cargo build --release
 cargo test
+cargo clippy --workspace --all-targets -- -D warnings
 ```
+
+`cargo clippy` with `-D warnings` covers every crate in the workspace; CI runs the same
+command on Windows and Linux.
 
 Artefacts:
 
 | File | Purpose |
 | --- | --- |
-| `target/release/SonicForgeAPO.dll` | the audio processing object |
+| `target/release/sonicforge_apo.dll` | the audio processing object, installed and registered as `SonicForgeAPO.dll` |
 | `target/release/sonicforge.exe` | command line tools |
 | `target/release/sonicforge-editor.exe` | the GUI editor |
 | `target/release/sonicforge-tray.exe` | tray application |
@@ -113,7 +117,7 @@ Artefacts:
 Or manually, for development:
 
 ```powershell
-.\sonicforge.exe apo install --dll target\release\SonicForgeAPO.dll
+.\sonicforge.exe apo install --dll target\release\sonicforge_apo.dll
 .\sonicforge.exe apo enable --all
 ```
 
