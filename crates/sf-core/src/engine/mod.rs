@@ -4,6 +4,11 @@ mod compile;
 
 pub use compile::{compile_document, compile_file, CompileOptions, CompiledChain};
 
+/// Formats every diagnostic of a compiled chain as `file:line: severity: message`.
+pub fn compiler_diagnostics(chain: &CompiledChain) -> Vec<String> {
+    chain.diagnostics.iter().map(|d| d.to_string()).collect()
+}
+
 /// APO stage a set of commands applies to.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Stage {

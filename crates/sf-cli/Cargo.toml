@@ -1,0 +1,29 @@
+[package]
+name = "sf-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "SonicForge command line tools: devices, validation, rendering and APO management"
+
+[[bin]]
+name = "sonicforge"
+path = "src/main.rs"
+
+[dependencies]
+sf-core = { workspace = true }
+sf-win = { workspace = true }
+clap = { version = "4", features = ["derive"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.58", features = [
+    "Win32_Foundation",
+    "Win32_System_Com",
+    "Win32_System_LibraryLoader",
+    "Win32_Media_Audio",
+    "Win32_Media_Audio_Apo",
+] }

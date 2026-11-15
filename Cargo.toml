@@ -2,6 +2,9 @@
 resolver = "2"
 members = [
     "crates/sf-core",
+    "crates/sf-win",
+    "crates/sf-apo",
+    "crates/sf-cli",
 ]
 
 [workspace.package]
@@ -15,6 +18,7 @@ description = "SonicForge - a modern, open-source system-wide audio processor fo
 
 [workspace.dependencies]
 sf-core = { path = "crates/sf-core" }
+sf-win = { path = "crates/sf-win" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 regex = "1"

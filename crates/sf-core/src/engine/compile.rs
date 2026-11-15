@@ -7,7 +7,7 @@
 
 use super::Stage;
 use crate::config::expr::{expand_inline, Env};
-use crate::config::filter::{parse_copy, parse_delay, parse_filter, parse_graphic_eq, resolve_copy, DelayCommand};
+use crate::config::filter::{parse_copy, parse_delay, parse_filter, parse_graphic_eq, resolve_copy};
 use crate::config::parser::{Command, ConfigLine, Diagnostic, Document, Severity};
 use crate::config::preset::Preset;
 use crate::device::{matches_device_list, ChannelLayout, DeviceInfo};
