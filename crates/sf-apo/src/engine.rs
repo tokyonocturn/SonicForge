@@ -38,6 +38,10 @@ pub struct ApoEngine {
     last_config_generation: u32,
     latency_samples: usize,
     force_reload: bool,
+    /// Last listening volume sampled from the endpoint, in dB. Used to notice
+    /// volume knob changes so `LoudnessCorrection:` retunes without a config
+    /// edit. `Cell` because the poll takes `&self`.
+    last_volume_db: std::cell::Cell<Option<f32>>,
     pub reloads: u64,
 }
 
@@ -65,6 +69,7 @@ impl ApoEngine {
             last_config_generation: 0,
             latency_samples: 0,
             force_reload: true,
+            last_volume_db: std::cell::Cell::new(None),
             reloads: 0,
         };
         engine.reload();
@@ -146,6 +151,8 @@ impl ApoEngine {
             }
         };
         let doc = Document::parse_with_path(&text, Some(&self.config_path));
+        let volume_db = sf_win::endpoints::default_render_volume_db().unwrap_or(0.0);
+        self.last_volume_db.set(Some(volume_db));
         let options = CompileOptions {
             sample_rate: self.sample_rate,
             channels: self.input_channels,
@@ -154,7 +161,7 @@ impl ApoEngine {
             max_include_depth: 16,
             convolution_block: sf_core::dsp::convolver::DEFAULT_BLOCK,
             // Polled off the audio thread: the watcher reloads this chain.
-            volume_db: sf_win::endpoints::default_render_volume_db().unwrap_or(0.0) as f64,
+            volume_db: volume_db as f64,
         };
         let chain = compile_document(&doc, &options);
         report.changed = true;
@@ -168,12 +175,25 @@ impl ApoEngine {
         report
     }
 
-    /// True when the configuration file changed on disk.
+    /// True when the configuration file changed on disk, or when the listening
+    /// volume moved enough to change the loudness correction.
+    ///
+    /// Called from the watcher thread, never from the audio thread: the volume
+    /// query is a COM call and must stay off the real-time path.
     pub fn config_changed_on_disk(&self) -> bool {
         let current = std::fs::metadata(&self.config_path)
             .and_then(|m| m.modified())
             .ok();
-        current != self.mtime
+        if current != self.mtime {
+            return true;
+        }
+        let now = sf_win::endpoints::default_render_volume_db();
+        match (now, self.last_volume_db.get()) {
+            // 1 dB is well below one step of the correction curve and keeps the
+            // recompile rate low while the user turns the knob.
+            (Some(now), Some(previous)) => (now - previous).abs() >= 1.0,
+            _ => false,
+        }
     }
 
     /// Forces a reload on the next call to [`Self::reload`].

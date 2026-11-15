@@ -84,7 +84,9 @@ The implemented model, documented in `sf_core::dsp::loudness`:
 * headroom preamp of `-0.5 * (low + high)` dB.
 
 `Attenuation` scales the whole correction between 0 and 1. `State 0` bypasses it
-without removing the line. At or above the reference the correction is exactly
+without removing the line. The listening volume is read from the default playback
+endpoint and re-sampled by the watcher whenever it moves by 1 dB or more, so turning
+the Windows volume knob retunes the correction without editing the configuration. At or above the reference the correction is exactly
 0 dB, so the effect is inaudible at normal listening levels and grows as the
 volume drops. Tests assert the measured pipeline gain at 20 dB, 30 dB and 40 dB
 below the reference, the headroom cut, the attenuation scaling, the neutral point,
