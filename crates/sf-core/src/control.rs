@@ -23,6 +23,10 @@ pub struct ControlSnapshot {
     pub preamp_db: f32,
     /// Incremented by editors after writing a new configuration file.
     pub config_generation: u32,
+    /// System playback volume in dB relative to full scale (`0.0` is maximum),
+    /// published by whoever polls the endpoint so the APO can apply
+    /// `LoudnessCorrection:` without a COM call on the audio thread.
+    pub master_volume_db: f32,
 }
 
 #[cfg(windows)]
@@ -132,11 +136,13 @@ mod platform {
                 let bypass = std::ptr::read_volatile(&(*self.view).bypass) != 0;
                 let preamp = std::ptr::read_volatile(&(*self.view).preamp_millidb) as f32 / 1000.0;
                 let config_generation = std::ptr::read_volatile(&(*self.view).config_generation);
+                let volume_millidb = std::ptr::read_volatile(&(*self.view).reserved[0]) as i32;
                 ControlSnapshot {
                     generation,
                     bypass,
                     preamp_db: preamp,
                     config_generation,
+                    master_volume_db: volume_millidb as f32 / 1000.0,
                 }
             }
         }
@@ -151,6 +157,11 @@ mod platform {
                 std::ptr::write_volatile(
                     &mut (*self.view).config_generation,
                     snapshot.config_generation,
+                );
+                std::ptr::write_volatile(
+                    &mut (*self.view).reserved[0],
+                    // MillidB are signed: the slot is read back as i32.
+                    ((snapshot.master_volume_db * 1000.0).round() as i32) as u32,
                 );
                 let next = std::ptr::read_volatile(&(*self.view).generation).wrapping_add(1);
                 std::ptr::write_volatile(&mut (*self.view).generation, next);
@@ -271,6 +282,7 @@ mod tests {
             bypass: false,
             preamp_db: 0.0,
             config_generation: 3,
+            master_volume_db: -12.0,
         });
         let snap = block.set_bypass(true);
         assert!(snap.bypass);
@@ -278,6 +290,9 @@ mod tests {
         assert!((snap.preamp_db + 6.5).abs() < 1e-3);
         assert!(snap.generation > 0);
         assert_eq!(snap.config_generation, 3);
+        // The listening volume travels in a reserved slot, so it must survive
+        // writes done by the editor and tray untouched.
+        assert!((snap.master_volume_db + 12.0).abs() < 1e-3);
     }
 
     #[test]

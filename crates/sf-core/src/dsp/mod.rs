@@ -6,6 +6,7 @@ pub mod delay;
 pub mod fft;
 pub mod filters;
 pub mod graphic_eq;
+pub mod loudness;
 pub mod mixer;
 pub mod pipeline;
 

@@ -196,6 +196,35 @@ pub fn default_endpoint(_flow: Flow) -> Result<Option<Endpoint>, String> {
     Err("audio endpoints are only available on Windows".into())
 }
 
+/// Reads the master volume of the default playback device in dB relative to
+/// full scale (`0.0` is maximum). Returns `None` when there is no default
+/// device or the endpoint exposes no volume control.
+#[cfg(windows)]
+pub fn default_render_volume_db() -> Option<f32> {
+    use windows::Win32::Media::Audio::Endpoints::IAudioEndpointVolume;
+    use windows::Win32::Media::Audio::{
+        eConsole, eRender, IMMDeviceEnumerator, MMDeviceEnumerator,
+    };
+    use windows::Win32::System::Com::{
+        CoCreateInstance, CoInitializeEx, CoUninitialize, CLSCTX_ALL, COINIT_MULTITHREADED,
+    };
+
+    unsafe {
+        let initialized = CoInitializeEx(None, COINIT_MULTITHREADED);
+        let result = (|| -> Option<f32> {
+            let enumerator: IMMDeviceEnumerator =
+                CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL).ok()?;
+            let device = enumerator.GetDefaultAudioEndpoint(eRender, eConsole).ok()?;
+            let volume: IAudioEndpointVolume = device.Activate(CLSCTX_ALL, None).ok()?;
+            volume.GetMasterVolumeLevel().ok()
+        })();
+        if initialized.is_ok() {
+            CoUninitialize();
+        }
+        result
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

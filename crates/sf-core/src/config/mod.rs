@@ -2,6 +2,7 @@
 
 pub mod expr;
 pub mod filter;
+pub mod loudness;
 pub mod parser;
 pub mod preset;
 

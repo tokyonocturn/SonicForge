@@ -153,6 +153,8 @@ impl ApoEngine {
             stage: Stage::PostMix,
             max_include_depth: 16,
             convolution_block: sf_core::dsp::convolver::DEFAULT_BLOCK,
+            // Polled off the audio thread: the watcher reloads this chain.
+            volume_db: sf_win::endpoints::default_render_volume_db().unwrap_or(0.0) as f64,
         };
         let chain = compile_document(&doc, &options);
         report.changed = true;

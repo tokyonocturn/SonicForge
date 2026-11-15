@@ -16,10 +16,10 @@ use crate::device::{matches_device_list, ChannelLayout, DeviceInfo};
 use crate::dsp::biquad::IirFilter;
 use crate::dsp::convolver::{Convolver, DEFAULT_BLOCK};
 use crate::dsp::delay::DelayLine;
-use crate::dsp::filters::design;
+use crate::dsp::filters::{design, FilterKind, FilterSpec};
 use crate::dsp::graphic_eq::design_graphic_eq;
 use crate::dsp::pipeline::{ChannelMask, Op, Pipeline};
-use crate::wav::read_wave;
+use crate::ir::load_impulse_response;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
@@ -36,6 +36,9 @@ pub struct CompileOptions {
     pub max_include_depth: usize,
     /// Convolution partition size (power of two).
     pub convolution_block: usize,
+    /// Current listening volume in dB relative to full scale, used by
+    /// `LoudnessCorrection:`. `0.0` means maximum volume.
+    pub volume_db: f64,
 }
 
 impl Default for CompileOptions {
@@ -47,6 +50,7 @@ impl Default for CompileOptions {
             stage: Stage::PostMix,
             max_include_depth: 16,
             convolution_block: DEFAULT_BLOCK,
+            volume_db: 0.0,
         }
     }
 }
@@ -426,7 +430,7 @@ impl<'a> Compiler<'a> {
                 } else {
                     base.join(file_name)
                 };
-                match read_wave(&path) {
+                match load_impulse_response(&path) {
                     Ok(audio) => {
                         if audio.sample_rate != self.options.sample_rate {
                             self.error(
@@ -611,10 +615,63 @@ impl<'a> Compiler<'a> {
                 self.error(line_no, "VST plugin hosting is not available in this build");
             }
             Command::LoudnessCorrection => {
-                self.warn(
-                    line_no,
-                    "LoudnessCorrection is not implemented and was ignored",
-                );
+                let Some(params) = self.expand(&line.params, line_no) else {
+                    return;
+                };
+                match crate::config::loudness::parse_loudness(&params) {
+                    Ok(settings) => {
+                        let curve =
+                            crate::dsp::loudness::correction(&settings, self.options.volume_db);
+                        if curve.is_neutral() {
+                            // Active, but the listening level is at or above the
+                            // reference, where the documented correction is zero.
+                            return;
+                        }
+                        if curve.preamp_db.abs() > f64::EPSILON {
+                            self.pipeline.push(Op::Gain {
+                                mask: self.channel_mask,
+                                gain: 10f64.powf(curve.preamp_db / 20.0) as f32,
+                            });
+                        }
+                        let sample_rate = self.options.sample_rate as f64;
+                        let shelves = [
+                            (
+                                FilterKind::LowShelf12,
+                                crate::dsp::loudness::LOW_SHELF_HZ,
+                                curve.low_shelf_db,
+                            ),
+                            (
+                                FilterKind::HighShelf12,
+                                crate::dsp::loudness::HIGH_SHELF_HZ,
+                                curve.high_shelf_db,
+                            ),
+                        ];
+                        for (kind, freq, gain_db) in shelves {
+                            if gain_db.abs() <= f64::EPSILON {
+                                continue;
+                            }
+                            let mut spec = FilterSpec::new(kind, freq);
+                            spec.gain_db = gain_db;
+                            match design(&spec, sample_rate) {
+                                Some(bq) => self.pipeline.push(Op::Biquad {
+                                    mask: self.channel_mask,
+                                    cascade: vec![bq],
+                                    states: Vec::new(),
+                                }),
+                                None => self.warn(
+                                    line_no,
+                                    format!(
+                                        "loudness correction shelf at {freq} Hz cannot be represented at {} Hz",
+                                        self.options.sample_rate
+                                    ),
+                                ),
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        self.error(line_no, format!("invalid LoudnessCorrection command: {e}"))
+                    }
+                }
             }
             Command::Comment | Command::Unknown => {}
             Command::If | Command::ElseIf | Command::Else | Command::EndIf => {}
@@ -631,7 +688,7 @@ impl<'a> Compiler<'a> {
                 crate::config::Value::Int(channels as i64),
             );
         }
-        self.diagnostics.sort_by(|a, b| a.line.cmp(&b.line));
+        self.diagnostics.sort_by_key(|d| d.line);
         CompiledChain {
             pipeline: self.pipeline,
             diagnostics: self.diagnostics,
