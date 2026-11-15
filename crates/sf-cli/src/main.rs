@@ -809,9 +809,3 @@ fn cmd_diagnose(bundle: Option<PathBuf>) -> Result<ExitCode, String> {
     }
     Ok(ExitCode::SUCCESS)
 }
-
-/// Placeholder so `self_test` can reference the crate's CLSID on all platforms.
-#[allow(dead_code)]
-fn clsid() -> &'static str {
-    sf_win::APO_CLSID
-}
