@@ -29,6 +29,12 @@ pub const LOW_SHELF_HZ: f64 = 75.0;
 pub const HIGH_SHELF_HZ: f64 = 10000.0;
 /// Largest amount of correction applied, in dB below reference.
 pub const MAX_CORRECTION_DB: f64 = 40.0;
+/// How far the listening volume must move before the chain is rebuilt.
+///
+/// One dB is far below a step of the correction curve (0.5 dB of bass shelf),
+/// so retuning stays inaudible while the recompile rate stays low when a user
+/// drags the volume slider.
+pub const DEFAULT_RETUNE_THRESHOLD_DB: f32 = 1.0;
 
 /// Parsed `LoudnessCorrection:` parameters.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -100,6 +106,79 @@ pub fn correction(settings: &LoudnessSettings, volume_db: f64) -> LoudnessCorrec
     }
 }
 
+/// Decides when a volume change is big enough to rebuild the chain.
+///
+/// Deliberately platform free: the APO feeds it the endpoint volume it polls,
+/// and the tests below exercise the deadband on every host, including the ones
+/// where the Windows audio APIs do not exist.
+#[derive(Clone, Copy, Debug)]
+pub struct VolumeTracker {
+    last: Option<f32>,
+    threshold_db: f32,
+}
+
+impl VolumeTracker {
+    pub fn new(threshold_db: f32) -> Self {
+        Self {
+            last: None,
+            threshold_db: if threshold_db.is_finite() {
+                threshold_db.max(0.0)
+            } else {
+                DEFAULT_RETUNE_THRESHOLD_DB
+            },
+        }
+    }
+
+    /// The volume the last rebuild was computed for, if any.
+    pub fn last(&self) -> Option<f32> {
+        self.last
+    }
+
+    pub fn threshold_db(&self) -> f32 {
+        self.threshold_db
+    }
+
+    /// Records a sample and reports whether the correction must be rebuilt.
+    ///
+    /// The first sample only seeds the tracker. Inside the deadband the last
+    /// value is kept, not overwritten, so a slow drift accumulates and still
+    /// triggers a rebuild once it leaves the band.
+    pub fn observe(&mut self, volume_db: f32) -> bool {
+        if !volume_db.is_finite() {
+            return false;
+        }
+        match self.last {
+            None => {
+                self.last = Some(volume_db);
+                false
+            }
+            Some(previous) => {
+                // An unchanged reading never retunes: with a zero threshold the
+                // comparison below is always true, which would rebuild the chain
+                // on every poll.
+                if volume_db == previous {
+                    return false;
+                }
+                if (volume_db - previous).abs() >= self.threshold_db {
+                    self.last = Some(volume_db);
+                    true
+                } else {
+                    false
+                }
+            }
+        }
+    }
+
+    /// [`Self::observe`] for an optional reading, e.g. when the endpoint has no
+    /// volume control. A missing reading never triggers a rebuild.
+    pub fn observe_reading(&mut self, volume_db: Option<f32>) -> bool {
+        match volume_db {
+            Some(volume) => self.observe(volume),
+            None => false,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -168,6 +247,109 @@ mod tests {
         let mut s = settings();
         s.state = false;
         assert!(correction(&s, -60.0).is_neutral());
+    }
+
+    #[test]
+    fn tracker_seeds_on_the_first_reading() {
+        let mut tracker = VolumeTracker::new(DEFAULT_RETUNE_THRESHOLD_DB);
+        assert!(
+            !tracker.observe(-20.0),
+            "the first reading must not rebuild"
+        );
+        assert_eq!(tracker.last(), Some(-20.0));
+    }
+
+    #[test]
+    fn tracker_requires_a_rebuild_when_the_volume_moves() {
+        let mut tracker = VolumeTracker::new(DEFAULT_RETUNE_THRESHOLD_DB);
+        tracker.observe(-20.0);
+        assert!(
+            tracker.observe(-30.0),
+            "a 10 dB drop must retune the correction"
+        );
+        assert_eq!(tracker.last(), Some(-30.0));
+        assert!(tracker.observe(-10.0), "a rise must retune as well");
+        assert_eq!(tracker.last(), Some(-10.0));
+    }
+
+    #[test]
+    fn tracker_ignores_changes_inside_the_deadband() {
+        let mut tracker = VolumeTracker::new(DEFAULT_RETUNE_THRESHOLD_DB);
+        tracker.observe(-20.0);
+        for within in [-20.4, -19.6, -20.99, -19.01, -20.0] {
+            assert!(!tracker.observe(within), "{within} dB must not rebuild");
+            assert_eq!(tracker.last(), Some(-20.0), "{within} dB moved the anchor");
+        }
+    }
+
+    #[test]
+    fn tracker_accumulates_slow_drift_until_it_leaves_the_deadband() {
+        let mut tracker = VolumeTracker::new(DEFAULT_RETUNE_THRESHOLD_DB);
+        tracker.observe(-20.0);
+        assert!(!tracker.observe(-20.6));
+        assert!(
+            tracker.observe(-21.2),
+            "two 0.6 dB steps add up to a 1.2 dB move"
+        );
+        assert_eq!(tracker.last(), Some(-21.2));
+    }
+
+    #[test]
+    fn tracker_handles_missing_and_invalid_readings() {
+        let mut tracker = VolumeTracker::new(DEFAULT_RETUNE_THRESHOLD_DB);
+        assert!(!tracker.observe_reading(None));
+        assert_eq!(tracker.last(), None);
+        tracker.observe(-20.0);
+        assert!(!tracker.observe_reading(None));
+        assert!(!tracker.observe(f32::NAN));
+        assert_eq!(tracker.last(), Some(-20.0));
+    }
+
+    #[test]
+    fn a_zero_threshold_retunes_on_any_change() {
+        let mut tracker = VolumeTracker::new(0.0);
+        tracker.observe(-20.0);
+        assert!(tracker.observe(-20.01));
+        assert!(!tracker.observe(-20.01), "no movement, no rebuild");
+    }
+
+    #[test]
+    fn a_degenerate_threshold_falls_back_to_the_default() {
+        assert_eq!(
+            VolumeTracker::new(f32::NAN).threshold_db(),
+            DEFAULT_RETUNE_THRESHOLD_DB
+        );
+        assert_eq!(VolumeTracker::new(-5.0).threshold_db(), 0.0);
+    }
+
+    #[test]
+    fn the_correction_changes_when_the_volume_changes() {
+        let s = settings();
+        let at_reference = correction(&s, -20.0);
+        let quieter = correction(&s, -30.0);
+        assert!(at_reference.is_neutral());
+        assert!(!quieter.is_neutral());
+        assert!((quieter.low_shelf_db - 5.0).abs() < 1e-12);
+        assert!(quieter.low_shelf_db > at_reference.low_shelf_db);
+    }
+
+    #[test]
+    fn the_deadband_keeps_the_previously_applied_correction() {
+        // What the APO actually does: it keeps the compiled chain until the
+        // tracker asks for a rebuild, so a 0.4 dB nudge must leave the audio
+        // exactly as it was.
+        let s = settings();
+        let mut tracker = VolumeTracker::new(DEFAULT_RETUNE_THRESHOLD_DB);
+        tracker.observe(-30.0);
+        let applied = correction(&s, tracker.last().unwrap() as f64);
+        assert!(!tracker.observe(-29.6), "inside the deadband");
+        let still_applied = correction(&s, tracker.last().unwrap() as f64);
+        assert_eq!(applied, still_applied);
+
+        assert!(tracker.observe(-28.0), "leaves the deadband");
+        let retuned = correction(&s, tracker.last().unwrap() as f64);
+        assert!(retuned.low_shelf_db < applied.low_shelf_db);
+        assert!((applied.low_shelf_db - retuned.low_shelf_db - 1.0).abs() < 1e-12);
     }
 
     #[test]

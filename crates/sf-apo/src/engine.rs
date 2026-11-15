@@ -7,6 +7,7 @@
 use sf_core::config::Document;
 use sf_core::control::{ControlBlock, ControlSnapshot};
 use sf_core::device::DeviceInfo;
+use sf_core::dsp::loudness::{VolumeTracker, DEFAULT_RETUNE_THRESHOLD_DB};
 use sf_core::engine::compiler_diagnostics;
 use sf_core::engine::{compile_document, CompileOptions, CompiledChain, Stage};
 use std::path::{Path, PathBuf};
@@ -38,10 +39,11 @@ pub struct ApoEngine {
     last_config_generation: u32,
     latency_samples: usize,
     force_reload: bool,
-    /// Last listening volume sampled from the endpoint, in dB. Used to notice
-    /// volume knob changes so `LoudnessCorrection:` retunes without a config
-    /// edit. `Cell` because the poll takes `&self`.
-    last_volume_db: std::cell::Cell<Option<f32>>,
+    /// Decides when a volume knob change is worth a rebuild. Holds the last
+    /// volume the chain was compiled for, so `LoudnessCorrection:` retunes
+    /// without a config edit. The decision logic lives in `sf-core` so it is
+    /// unit tested on every platform; `Cell` because the poll takes `&self`.
+    volume_tracker: std::cell::Cell<VolumeTracker>,
     pub reloads: u64,
 }
 
@@ -69,7 +71,7 @@ impl ApoEngine {
             last_config_generation: 0,
             latency_samples: 0,
             force_reload: true,
-            last_volume_db: std::cell::Cell::new(None),
+            volume_tracker: std::cell::Cell::new(VolumeTracker::new(DEFAULT_RETUNE_THRESHOLD_DB)),
             reloads: 0,
         };
         engine.reload();
@@ -152,7 +154,9 @@ impl ApoEngine {
         };
         let doc = Document::parse_with_path(&text, Some(&self.config_path));
         let volume_db = sf_win::endpoints::default_render_volume_db().unwrap_or(0.0);
-        self.last_volume_db.set(Some(volume_db));
+        let mut tracker = self.volume_tracker.get();
+        tracker.observe(volume_db);
+        self.volume_tracker.set(tracker);
         let options = CompileOptions {
             sample_rate: self.sample_rate,
             channels: self.input_channels,
@@ -187,13 +191,10 @@ impl ApoEngine {
         if current != self.mtime {
             return true;
         }
-        let now = sf_win::endpoints::default_render_volume_db();
-        match (now, self.last_volume_db.get()) {
-            // 1 dB is well below one step of the correction curve and keeps the
-            // recompile rate low while the user turns the knob.
-            (Some(now), Some(previous)) => (now - previous).abs() >= 1.0,
-            _ => false,
-        }
+        let mut tracker = self.volume_tracker.get();
+        let retune = tracker.observe_reading(sf_win::endpoints::default_render_volume_db());
+        self.volume_tracker.set(tracker);
+        retune
     }
 
     /// Forces a reload on the next call to [`Self::reload`].
