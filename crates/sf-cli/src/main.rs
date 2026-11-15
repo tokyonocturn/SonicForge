@@ -166,8 +166,17 @@ fn main() -> ExitCode {
     let cli = Cli::parse();
     let result = match cli.command {
         Command2::Devices { flow, json } => cmd_devices(flow.into(), json),
-        Command2::Validate { file, rate, channels } => cmd_validate(file, rate, channels),
-        Command2::Render { config, input, output, block } => cmd_render(&config, &input, &output, block),
+        Command2::Validate {
+            file,
+            rate,
+            channels,
+        } => cmd_validate(file, rate, channels),
+        Command2::Render {
+            config,
+            input,
+            output,
+            block,
+        } => cmd_render(&config, &input, &output, block),
         Command2::Apo { action } => cmd_apo(action),
         Command2::Config { action } => cmd_config(action),
         Command2::Presets { action } => cmd_presets(action),
@@ -204,7 +213,10 @@ fn cmd_devices(flow: Flow, json: bool) -> Result<ExitCode, String> {
                 })
             })
             .collect();
-        println!("{}", serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "[]".into()));
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "[]".into())
+        );
         return Ok(ExitCode::SUCCESS);
     }
     if list.is_empty() {
@@ -221,7 +233,11 @@ fn cmd_devices(flow: Flow, json: bool) -> Result<ExitCode, String> {
         println!(
             "  {} {} {}",
             if endpoint.is_default { "*" } else { " " },
-            if enabled { "[SonicForge]" } else { "[          ]" },
+            if enabled {
+                "[SonicForge]"
+            } else {
+                "[          ]"
+            },
             endpoint.name
         );
         println!("      guid: {}", endpoint.guid);
@@ -265,10 +281,19 @@ fn cmd_validate(file: Option<PathBuf>, rate: u32, channels: usize) -> Result<Exi
         chain.pipeline.latency_samples()
     );
     let ok = report_diagnostics(&chain);
-    Ok(if ok { ExitCode::SUCCESS } else { ExitCode::FAILURE })
+    Ok(if ok {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
+    })
 }
 
-fn cmd_render(config: &Path, input: &Path, output: &Path, block: usize) -> Result<ExitCode, String> {
+fn cmd_render(
+    config: &Path,
+    input: &Path,
+    output: &Path,
+    block: usize,
+) -> Result<ExitCode, String> {
     let audio = read_wave(input).map_err(|e| format!("cannot read '{}': {e}", input.display()))?;
     let channels = audio.channel_count().max(1);
     let frames = audio.frames();
@@ -282,8 +307,8 @@ fn cmd_render(config: &Path, input: &Path, output: &Path, block: usize) -> Resul
         ..Default::default()
     };
     // Compile from the file so `Include:` and `Convolution:` paths resolve.
-    let mut chain =
-        compile_file(config, &options).map_err(|e| format!("cannot read '{}': {e}", config.display()))?;
+    let mut chain = compile_file(config, &options)
+        .map_err(|e| format!("cannot read '{}': {e}", config.display()))?;
     if chain.has_errors() {
         report_diagnostics(&chain);
         return Err("configuration has errors, refusing to render".into());
@@ -325,7 +350,11 @@ fn cmd_render(config: &Path, input: &Path, output: &Path, block: usize) -> Resul
         .flat_map(|c| c.iter())
         .fold(0.0f32, |acc, v| acc.max(v.abs()));
     let rms = {
-        let sum: f64 = out.iter().flat_map(|c| c.iter()).map(|v| (*v as f64) * (*v as f64)).sum();
+        let sum: f64 = out
+            .iter()
+            .flat_map(|c| c.iter())
+            .map(|v| (*v as f64) * (*v as f64))
+            .sum();
         let count = (frames * pipeline_channels).max(1);
         (sum / count as f64).sqrt() as f32
     };
@@ -338,7 +367,10 @@ fn cmd_render(config: &Path, input: &Path, output: &Path, block: usize) -> Resul
         audio.sample_rate,
         output.display()
     );
-    println!("Peak {peak:.4} ({:.2} dBFS), RMS {rms:.4}", 20.0 * peak.max(1e-9).log10());
+    println!(
+        "Peak {peak:.4} ({:.2} dBFS), RMS {rms:.4}",
+        20.0 * peak.max(1e-9).log10()
+    );
     if peak > 1.0 {
         println!("warning: output exceeds full scale; lower the preamp to avoid clipping");
     }
@@ -421,7 +453,11 @@ fn cmd_apo(action: ApoAction) -> Result<ExitCode, String> {
                 return Ok(ExitCode::SUCCESS);
             }
             for status in statuses {
-                let state = if status.enabled { "enabled" } else { "not enabled" };
+                let state = if status.enabled {
+                    "enabled"
+                } else {
+                    "not enabled"
+                };
                 println!("{state:>11}  {}", status.endpoint.name);
                 if let Some(clsid) = &status.effect_clsid {
                     println!("             effect CLSID: {clsid}");
@@ -447,7 +483,11 @@ fn cmd_apo(action: ApoAction) -> Result<ExitCode, String> {
     }
 }
 
-fn select_endpoints(flow: Flow, all: bool, device: Option<String>) -> Result<Vec<endpoints::Endpoint>, String> {
+fn select_endpoints(
+    flow: Flow,
+    all: bool,
+    device: Option<String>,
+) -> Result<Vec<endpoints::Endpoint>, String> {
     if let Some(selector) = device {
         let endpoint = endpoints::find(flow, &selector)?
             .ok_or_else(|| format!("no endpoint matches '{selector}'"))?;
@@ -462,7 +502,7 @@ fn select_endpoints(flow: Flow, all: bool, device: Option<String>) -> Result<Vec
 #[cfg(windows)]
 fn self_test(dll_path: &Path) -> Result<ExitCode, String> {
     use std::ffi::c_void;
-    use windows::core::{GUID, HRESULT, IUnknown, Interface, PCWSTR};
+    use windows::core::{IUnknown, Interface, GUID, HRESULT, PCWSTR};
     use windows::Win32::Media::Audio::Apo::{
         IAudioProcessingObject, IAudioProcessingObjectConfiguration, APO_REG_PROPERTIES,
     };
@@ -470,11 +510,16 @@ fn self_test(dll_path: &Path) -> Result<ExitCode, String> {
 
     #[repr(C)]
     struct FactoryVtbl {
-        query_interface: unsafe extern "system" fn(*mut c_void, *const GUID, *mut *mut c_void) -> HRESULT,
+        query_interface:
+            unsafe extern "system" fn(*mut c_void, *const GUID, *mut *mut c_void) -> HRESULT,
         add_ref: unsafe extern "system" fn(*mut c_void) -> u32,
         release: unsafe extern "system" fn(*mut c_void) -> u32,
-        create_instance:
-            unsafe extern "system" fn(*mut c_void, *mut c_void, *const GUID, *mut *mut c_void) -> HRESULT,
+        create_instance: unsafe extern "system" fn(
+            *mut c_void,
+            *mut c_void,
+            *const GUID,
+            *mut *mut c_void,
+        ) -> HRESULT,
         lock_server: unsafe extern "system" fn(*mut c_void, i32) -> HRESULT,
     }
     #[repr(C)]
@@ -485,7 +530,8 @@ fn self_test(dll_path: &Path) -> Result<ExitCode, String> {
     }
     #[repr(C)]
     struct ApoVtblProbe {
-        query_interface: unsafe extern "system" fn(*mut c_void, *const GUID, *mut *mut c_void) -> HRESULT,
+        query_interface:
+            unsafe extern "system" fn(*mut c_void, *const GUID, *mut *mut c_void) -> HRESULT,
         add_ref: unsafe extern "system" fn(*mut c_void) -> u32,
         release: unsafe extern "system" fn(*mut c_void) -> u32,
         reset: usize,
@@ -505,8 +551,11 @@ fn self_test(dll_path: &Path) -> Result<ExitCode, String> {
             .map_err(|e| format!("cannot load '{}': {e}", dll_path.display()))?;
         let proc = GetProcAddress(module, windows::core::s!("DllGetClassObject"))
             .ok_or("DLL does not export DllGetClassObject")?;
-        let get_class_object: unsafe extern "system" fn(*const GUID, *const GUID, *mut *mut c_void) -> HRESULT =
-            std::mem::transmute(proc);
+        let get_class_object: unsafe extern "system" fn(
+            *const GUID,
+            *const GUID,
+            *mut *mut c_void,
+        ) -> HRESULT = std::mem::transmute(proc);
 
         let mut factory: *mut c_void = std::ptr::null_mut();
         let hr = get_class_object(
@@ -579,7 +628,14 @@ fn self_test(dll_path: &Path) -> Result<ExitCode, String> {
             .ok_or("missing DllCanUnloadNow")?;
         let can_unload: unsafe extern "system" fn() -> HRESULT = std::mem::transmute(unload);
         let hr = can_unload();
-        println!("DllCanUnloadNow after release: {}", if hr == windows::Win32::Foundation::S_OK { "S_OK" } else { "S_FALSE (still in use)" });
+        println!(
+            "DllCanUnloadNow after release: {}",
+            if hr == windows::Win32::Foundation::S_OK {
+                "S_OK"
+            } else {
+                "S_FALSE (still in use)"
+            }
+        );
         let _ = IUnknown::IID;
         Ok(ExitCode::SUCCESS)
     }
@@ -629,7 +685,11 @@ fn cmd_config(action: ConfigAction) -> Result<ExitCode, String> {
                 return Err("the file does not contain any recognised commands".into());
             }
             // Validate before touching the live configuration.
-            let options = CompileOptions { sample_rate: 48000, channels: 2, ..Default::default() };
+            let options = CompileOptions {
+                sample_rate: 48000,
+                channels: 2,
+                ..Default::default()
+            };
             let chain = compile_document(&doc, &options);
             for diagnostic in &chain.diagnostics {
                 println!("{diagnostic}");
@@ -641,7 +701,11 @@ fn cmd_config(action: ConfigAction) -> Result<ExitCode, String> {
             backup_if_exists(&target)?;
             std::fs::copy(&file, &target)
                 .map_err(|e| format!("cannot write '{}': {e}", target.display()))?;
-            println!("Imported {} command(s) into {}", doc.lines.len(), target.display());
+            println!(
+                "Imported {} command(s) into {}",
+                doc.lines.len(),
+                target.display()
+            );
             println!("The APO reloads the configuration automatically.");
             Ok(ExitCode::SUCCESS)
         }
@@ -660,7 +724,9 @@ fn cmd_presets(action: PresetAction) -> Result<ExitCode, String> {
             let preset = builtin_presets()
                 .into_iter()
                 .find(|p| p.name.eq_ignore_ascii_case(&name))
-                .ok_or_else(|| format!("unknown preset '{name}' (try `sonicforge presets list`)"))?;
+                .ok_or_else(|| {
+                    format!("unknown preset '{name}' (try `sonicforge presets list`)")
+                })?;
             let target = sf_win::paths::ensure_config_layout().map_err(|e| e.to_string())?;
             backup_if_exists(&target)?;
             std::fs::write(&target, preset.to_config_text())
@@ -678,14 +744,22 @@ fn cmd_presets(action: PresetAction) -> Result<ExitCode, String> {
 fn cmd_diagnose(bundle: Option<PathBuf>) -> Result<ExitCode, String> {
     let mut report = String::new();
     report.push_str(&format!("SonicForge {}\n", sf_core::VERSION));
-    report.push_str(&format!("OS: {} {}\n", std::env::consts::OS, std::env::consts::ARCH));
+    report.push_str(&format!(
+        "OS: {} {}\n",
+        std::env::consts::OS,
+        std::env::consts::ARCH
+    ));
     report.push_str(&format!("Configuration: {}\n", default_config().display()));
     report.push_str(&format!("Logs: {}\n\n", sf_win::paths::log_dir().display()));
 
     let config_path = default_config();
     let config_text = std::fs::read_to_string(&config_path).unwrap_or_default();
     let doc = Document::parse(&config_text);
-    let options = CompileOptions { sample_rate: 48000, channels: 2, ..Default::default() };
+    let options = CompileOptions {
+        sample_rate: 48000,
+        channels: 2,
+        ..Default::default()
+    };
     let chain = compile_document(&doc, &options);
     report.push_str(&format!(
         "Configuration: {} commands, {} stages, latency {} samples\n",
@@ -719,7 +793,8 @@ fn cmd_diagnose(bundle: Option<PathBuf>) -> Result<ExitCode, String> {
     print!("{report}");
 
     if let Some(dir) = bundle {
-        std::fs::create_dir_all(&dir).map_err(|e| format!("cannot create '{}': {e}", dir.display()))?;
+        std::fs::create_dir_all(&dir)
+            .map_err(|e| format!("cannot create '{}': {e}", dir.display()))?;
         std::fs::write(dir.join("diagnostics.txt"), &report).map_err(|e| e.to_string())?;
         if !config_text.is_empty() {
             std::fs::write(dir.join("config.txt"), &config_text).map_err(|e| e.to_string())?;

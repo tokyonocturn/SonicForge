@@ -178,7 +178,11 @@ pub fn design(spec: &FilterSpec, sample_rate: f64) -> Option<Biquad> {
     let w0 = 2.0 * PI * freq / sample_rate;
     let (sin_w0, cos_w0) = w0.sin_cos();
     let q = spec.bandwidth.to_q(freq, sample_rate);
-    let alpha = if q > 0.0 && q.is_finite() { sin_w0 / (2.0 * q) } else { sin_w0 / 2.0 };
+    let alpha = if q > 0.0 && q.is_finite() {
+        sin_w0 / (2.0 * q)
+    } else {
+        sin_w0 / 2.0
+    };
     let a = db_to_amp(spec.gain_db);
 
     let bq = match spec.kind {
@@ -348,7 +352,9 @@ mod tests {
     const FS: f64 = 48000.0;
 
     fn response_at(spec: &FilterSpec, freq: f64) -> f64 {
-        design(spec, FS).expect("filter should design").magnitude_db(freq, FS)
+        design(spec, FS)
+            .expect("filter should design")
+            .magnitude_db(freq, FS)
     }
 
     #[test]
@@ -375,7 +381,10 @@ mod tests {
     fn lowpass_is_minus_three_db_at_cutoff() {
         let spec = FilterSpec::new(FilterKind::LowPass, 1000.0);
         let at_cutoff = response_at(&spec, 1000.0);
-        assert!((at_cutoff + 3.0103).abs() < 0.05, "LP at Fc = {at_cutoff} dB");
+        assert!(
+            (at_cutoff + 3.0103).abs() < 0.05,
+            "LP at Fc = {at_cutoff} dB"
+        );
     }
 
     #[test]
@@ -392,7 +401,10 @@ mod tests {
     fn highpass_is_minus_three_db_at_cutoff() {
         let spec = FilterSpec::new(FilterKind::HighPass, 1000.0);
         let at_cutoff = response_at(&spec, 1000.0);
-        assert!((at_cutoff + 3.0103).abs() < 0.05, "HP at Fc = {at_cutoff} dB");
+        assert!(
+            (at_cutoff + 3.0103).abs() < 0.05,
+            "HP at Fc = {at_cutoff} dB"
+        );
     }
 
     #[test]

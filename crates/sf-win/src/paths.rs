@@ -38,7 +38,13 @@ pub fn presets_dir() -> PathBuf {
 pub fn device_config_file(guid: &str) -> PathBuf {
     let safe: String = guid
         .chars()
-        .map(|c| if c.is_ascii_alphanumeric() || c == '-' { c } else { '_' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '-' {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect();
     config_dir().join("devices").join(format!("{safe}.txt"))
 }
@@ -46,7 +52,15 @@ pub fn device_config_file(guid: &str) -> PathBuf {
 fn base_dir(env: &str, app: &str) -> PathBuf {
     let root = std::env::var_os(env)
         .map(PathBuf::from)
-        .or_else(|| std::env::var_os("USERPROFILE").map(|p| PathBuf::from(p).join("AppData").join(if env == "APPDATA" { "Roaming" } else { "Local" })))
+        .or_else(|| {
+            std::env::var_os("USERPROFILE").map(|p| {
+                PathBuf::from(p).join("AppData").join(if env == "APPDATA" {
+                    "Roaming"
+                } else {
+                    "Local"
+                })
+            })
+        })
         .unwrap_or_else(|| PathBuf::from("."));
     root.join(app)
 }

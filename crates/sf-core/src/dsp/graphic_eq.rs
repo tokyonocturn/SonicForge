@@ -28,7 +28,9 @@ pub fn design_graphic_eq(points: &[(f64, f64)], sample_rate: f64) -> Vec<Biquad>
     let mut pts: Vec<(f64, f64)> = points
         .iter()
         .copied()
-        .filter(|(f, g)| f.is_finite() && f.is_finite() && *f > 0.0 && *f < sample_rate / 2.0 && g.is_finite())
+        .filter(|(f, g)| {
+            f.is_finite() && f.is_finite() && *f > 0.0 && *f < sample_rate / 2.0 && g.is_finite()
+        })
         .collect();
     pts.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
     pts.dedup_by(|a, b| (a.0 - b.0).abs() < 1e-9);
@@ -51,7 +53,11 @@ pub fn design_graphic_eq(points: &[(f64, f64)], sample_rate: f64) -> Vec<Biquad>
     let n = pts.len();
     let mut qs = vec![std::f64::consts::FRAC_1_SQRT_2; n];
     for i in 0..n {
-        let lo = if i == 0 { pts[0].0 / 2f64.powf(1.0 / 6.0) } else { (pts[i - 1].0 * pts[i].0).sqrt() };
+        let lo = if i == 0 {
+            pts[0].0 / 2f64.powf(1.0 / 6.0)
+        } else {
+            (pts[i - 1].0 * pts[i].0).sqrt()
+        };
         let hi = if i == n - 1 {
             (pts[n - 1].0 * 2f64.powf(1.0 / 6.0)).min(sample_rate * 0.499)
         } else {
@@ -61,7 +67,10 @@ pub fn design_graphic_eq(points: &[(f64, f64)], sample_rate: f64) -> Vec<Biquad>
         qs[i] = (pts[i].0 / width).clamp(0.3, 30.0);
     }
 
-    let mut gains: Vec<f64> = pts.iter().map(|p| p.1.clamp(-MAX_GAIN_DB, MAX_GAIN_DB)).collect();
+    let mut gains: Vec<f64> = pts
+        .iter()
+        .map(|p| p.1.clamp(-MAX_GAIN_DB, MAX_GAIN_DB))
+        .collect();
     let mut cascade: Vec<Biquad> = Vec::with_capacity(n);
 
     for _ in 0..REFINE_ITERATIONS {
@@ -146,7 +155,13 @@ mod tests {
 
     fn cascade_db(cascade: &[Biquad], freq: f64) -> f64 {
         let w = 2.0 * PI * freq / FS;
-        cascade.iter().map(|b| b.response(w).norm()).product::<f64>().max(1e-12).log10() * 20.0
+        cascade
+            .iter()
+            .map(|b| b.response(w).norm())
+            .product::<f64>()
+            .max(1e-12)
+            .log10()
+            * 20.0
     }
 
     #[test]
@@ -172,7 +187,10 @@ mod tests {
         assert_eq!(cascade.len(), points.len());
         for &(f, g) in &points {
             let measured = cascade_db(&cascade, f);
-            assert!((measured - g).abs() < 0.5, "{f} Hz: measured {measured:.2} dB, want {g} dB");
+            assert!(
+                (measured - g).abs() < 0.5,
+                "{f} Hz: measured {measured:.2} dB, want {g} dB"
+            );
         }
     }
 
@@ -195,13 +213,19 @@ mod tests {
         let cascade = design_graphic_eq(&points, FS);
         for &(f, g) in &points {
             let measured = cascade_db(&cascade, f);
-            assert!((measured - g).abs() < 1.0, "{f} Hz: measured {measured:.2} dB, want {g} dB");
+            assert!(
+                (measured - g).abs() < 1.0,
+                "{f} Hz: measured {measured:.2} dB, want {g} dB"
+            );
         }
     }
 
     #[test]
     fn flat_graphic_eq_is_flat() {
-        let points: Vec<(f64, f64)> = [25.0, 100.0, 1000.0, 10000.0].iter().map(|f| (*f, 0.0)).collect();
+        let points: Vec<(f64, f64)> = [25.0, 100.0, 1000.0, 10000.0]
+            .iter()
+            .map(|f| (*f, 0.0))
+            .collect();
         let cascade = design_graphic_eq(&points, FS);
         for f in [50.0, 500.0, 2000.0, 15000.0] {
             assert!(cascade_db(&cascade, f).abs() < 1e-9);

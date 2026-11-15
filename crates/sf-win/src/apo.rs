@@ -8,9 +8,9 @@
 //! This module only touches the registry. It never deletes another product's
 //! CLSID registration and never modifies endpoints the user did not select.
 
-use crate::endpoints::{Flow, Endpoint};
-use windows::core::GUID;
+use crate::endpoints::{Endpoint, Flow};
 use crate::{APO_CLSID, APO_FRIENDLY_NAME};
+use windows::core::GUID;
 
 /// The endpoint effect CLSID property. The GUID is the Windows audio property
 /// set GUID; `,5` selects `PKEY_FX_EndpointEffectClsid`.
@@ -21,7 +21,8 @@ pub const PKEY_AUDIO_ENDPOINT_DISABLE_SYSFX: &str = "{1da5d803-d492-4edd-8c23-e0
 pub const PKEY_FX_ASSOCIATION: &str = "{d04e05a6-594b-4fb6-a80d-01af5eed7d1d},0";
 
 const BACKUP_ROOT: &str = r"SOFTWARE\SonicForge\Backup";
-const AUDIO_ENGINE_APOS: &str = r"SOFTWARE\Microsoft\Windows\CurrentVersion\AudioEngine\AudioProcessingObjects";
+const AUDIO_ENGINE_APOS: &str =
+    r"SOFTWARE\Microsoft\Windows\CurrentVersion\AudioEngine\AudioProcessingObjects";
 
 /// State of one endpoint with respect to SonicForge.
 #[derive(Clone, Debug, PartialEq)]
@@ -41,9 +42,7 @@ fn endpoint_key(flow: Flow, guid: &str) -> String {
         Flow::Render => "Render",
         Flow::Capture => "Capture",
     };
-    format!(
-        r"SOFTWARE\Microsoft\Windows\CurrentVersion\MMDevices\Audio\{branch}\{{{guid}}}"
-    )
+    format!(r"SOFTWARE\Microsoft\Windows\CurrentVersion\MMDevices\Audio\{branch}\{{{guid}}}")
 }
 
 fn backup_key(flow: Flow, guid: &str) -> String {
@@ -60,8 +59,8 @@ mod reg {
     use windows::Win32::Foundation::ERROR_SUCCESS;
     use windows::Win32::System::Registry::{
         RegCloseKey, RegCreateKeyExW, RegDeleteTreeW, RegDeleteValueW, RegOpenKeyExW,
-        RegQueryValueExW, RegSetValueExW, HKEY, HKEY_LOCAL_MACHINE, KEY_READ, KEY_WRITE,
-        REG_DWORD, REG_OPTION_NON_VOLATILE, REG_SZ,
+        RegQueryValueExW, RegSetValueExW, HKEY, HKEY_LOCAL_MACHINE, KEY_READ, KEY_WRITE, REG_DWORD,
+        REG_OPTION_NON_VOLATILE, REG_SZ,
     };
 
     fn wide(s: &str) -> Vec<u16> {
@@ -84,7 +83,13 @@ mod reg {
             let sub = wide(path);
             let mut handle = HKEY::default();
             let status = unsafe {
-                RegOpenKeyExW(HKEY_LOCAL_MACHINE, PCWSTR(sub.as_ptr()), 0, KEY_READ | KEY_WRITE, &mut handle)
+                RegOpenKeyExW(
+                    HKEY_LOCAL_MACHINE,
+                    PCWSTR(sub.as_ptr()),
+                    0,
+                    KEY_READ | KEY_WRITE,
+                    &mut handle,
+                )
             };
             if status != ERROR_SUCCESS {
                 return Err(format!(
@@ -189,11 +194,13 @@ mod reg {
             let key = wide(name);
             let text = wide(value);
             let bytes: Vec<u8> = text.iter().flat_map(|u| u.to_le_bytes()).collect();
-            let status = unsafe {
-                RegSetValueExW(self.0, PCWSTR(key.as_ptr()), 0, REG_SZ, Some(&bytes))
-            };
+            let status =
+                unsafe { RegSetValueExW(self.0, PCWSTR(key.as_ptr()), 0, REG_SZ, Some(&bytes)) };
             if status != ERROR_SUCCESS {
-                return Err(format!("cannot write registry value {name} (error {})", status.0));
+                return Err(format!(
+                    "cannot write registry value {name} (error {})",
+                    status.0
+                ));
             }
             Ok(())
         }
@@ -201,11 +208,13 @@ mod reg {
         pub fn set_u32(&self, name: &str, value: u32) -> Result<(), String> {
             let key = wide(name);
             let bytes = value.to_le_bytes();
-            let status = unsafe {
-                RegSetValueExW(self.0, PCWSTR(key.as_ptr()), 0, REG_DWORD, Some(&bytes))
-            };
+            let status =
+                unsafe { RegSetValueExW(self.0, PCWSTR(key.as_ptr()), 0, REG_DWORD, Some(&bytes)) };
             if status != ERROR_SUCCESS {
-                return Err(format!("cannot write registry value {name} (error {})", status.0));
+                return Err(format!(
+                    "cannot write registry value {name} (error {})",
+                    status.0
+                ));
             }
             Ok(())
         }
@@ -214,7 +223,10 @@ mod reg {
             let key = wide(name);
             let status = unsafe { RegDeleteValueW(self.0, PCWSTR(key.as_ptr())) };
             if status != ERROR_SUCCESS {
-                return Err(format!("cannot delete registry value {name} (error {})", status.0));
+                return Err(format!(
+                    "cannot delete registry value {name} (error {})",
+                    status.0
+                ));
             }
             Ok(())
         }
@@ -460,12 +472,21 @@ mod tests {
 
     #[test]
     fn backup_keys_are_separate_per_flow() {
-        assert_ne!(backup_key(Flow::Render, "abc"), backup_key(Flow::Capture, "abc"));
+        assert_ne!(
+            backup_key(Flow::Render, "abc"),
+            backup_key(Flow::Capture, "abc")
+        );
     }
 
     #[test]
     fn property_keys_match_windows_audio_definitions() {
-        assert_eq!(PKEY_FX_ENDPOINT_EFFECT_CLSID, "{d04e05a6-594b-4fb6-a80d-01af5eed7d1d},5");
-        assert_eq!(PKEY_AUDIO_ENDPOINT_DISABLE_SYSFX, "{1da5d803-d492-4edd-8c23-e0c0ffee7f0e},5");
+        assert_eq!(
+            PKEY_FX_ENDPOINT_EFFECT_CLSID,
+            "{d04e05a6-594b-4fb6-a80d-01af5eed7d1d},5"
+        );
+        assert_eq!(
+            PKEY_AUDIO_ENDPOINT_DISABLE_SYSFX,
+            "{1da5d803-d492-4edd-8c23-e0c0ffee7f0e},5"
+        );
     }
 }

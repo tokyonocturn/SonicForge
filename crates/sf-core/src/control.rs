@@ -63,7 +63,10 @@ mod platform {
     }
 
     fn wide(s: &str) -> Vec<u16> {
-        OsStr::new(s).encode_wide().chain(std::iter::once(0)).collect()
+        OsStr::new(s)
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect()
     }
 
     /// Mapped view of the control structure.
@@ -129,7 +132,12 @@ mod platform {
                 let bypass = std::ptr::read_volatile(&(*self.view).bypass) != 0;
                 let preamp = std::ptr::read_volatile(&(*self.view).preamp_millidb) as f32 / 1000.0;
                 let config_generation = std::ptr::read_volatile(&(*self.view).config_generation);
-                ControlSnapshot { generation, bypass, preamp_db: preamp, config_generation }
+                ControlSnapshot {
+                    generation,
+                    bypass,
+                    preamp_db: preamp,
+                    config_generation,
+                }
             }
         }
 
@@ -140,7 +148,10 @@ mod platform {
                     &mut (*self.view).preamp_millidb,
                     (snapshot.preamp_db * 1000.0).round() as i32,
                 );
-                std::ptr::write_volatile(&mut (*self.view).config_generation, snapshot.config_generation);
+                std::ptr::write_volatile(
+                    &mut (*self.view).config_generation,
+                    snapshot.config_generation,
+                );
                 let next = std::ptr::read_volatile(&(*self.view).generation).wrapping_add(1);
                 std::ptr::write_volatile(&mut (*self.view).generation, next);
             }
@@ -203,12 +214,16 @@ pub struct ControlBlock {
 impl ControlBlock {
     /// Creates (or opens) the control block, initialising it when new.
     pub fn create() -> std::io::Result<Self> {
-        Ok(Self { mapping: Mapping::create()? })
+        Ok(Self {
+            mapping: Mapping::create()?,
+        })
     }
 
     /// Opens an existing control block.
     pub fn open() -> std::io::Result<Self> {
-        Ok(Self { mapping: Mapping::open()? })
+        Ok(Self {
+            mapping: Mapping::open()?,
+        })
     }
 
     pub fn read(&self) -> ControlSnapshot {
@@ -251,7 +266,12 @@ mod tests {
     #[test]
     fn control_block_round_trips_values() {
         let block = ControlBlock::create().unwrap();
-        block.write(ControlSnapshot { generation: 0, bypass: false, preamp_db: 0.0, config_generation: 3 });
+        block.write(ControlSnapshot {
+            generation: 0,
+            bypass: false,
+            preamp_db: 0.0,
+            config_generation: 3,
+        });
         let snap = block.set_bypass(true);
         assert!(snap.bypass);
         let snap = block.set_preamp_db(-6.5);

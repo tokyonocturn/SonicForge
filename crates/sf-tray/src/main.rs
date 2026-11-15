@@ -31,12 +31,12 @@ mod windows_impl {
         Shell_NotifyIconW, NIF_ICON, NIF_MESSAGE, NIF_TIP, NIM_ADD, NIM_DELETE, NOTIFYICONDATAW,
     };
     use windows::Win32::UI::WindowsAndMessaging::{
-        AppendMenuW, CreatePopupMenu, CreateWindowExW, DefWindowProcW, DestroyMenu,
-        DestroyWindow, DispatchMessageW, GetCursorPos, GetMessageW, LoadIconW, MessageBoxW,
-        PostQuitMessage, RegisterClassW, SetForegroundWindow, TrackPopupMenu, TranslateMessage,
-        CS_HREDRAW, CS_VREDRAW, IDI_APPLICATION, MB_ICONINFORMATION, MF_CHECKED, MF_SEPARATOR,
-        MF_STRING, MSG, TPM_LEFTBUTTON, TPM_RETURNCMD, WM_APP, WM_DESTROY,
-        WM_LBUTTONDBLCLK, WM_RBUTTONUP, WNDCLASSW, WS_OVERLAPPED,
+        AppendMenuW, CreatePopupMenu, CreateWindowExW, DefWindowProcW, DestroyMenu, DestroyWindow,
+        DispatchMessageW, GetCursorPos, GetMessageW, LoadIconW, MessageBoxW, PostQuitMessage,
+        RegisterClassW, SetForegroundWindow, TrackPopupMenu, TranslateMessage, CS_HREDRAW,
+        CS_VREDRAW, IDI_APPLICATION, MB_ICONINFORMATION, MF_CHECKED, MF_SEPARATOR, MF_STRING, MSG,
+        TPM_LEFTBUTTON, TPM_RETURNCMD, WM_APP, WM_DESTROY, WM_LBUTTONDBLCLK, WM_RBUTTONUP,
+        WNDCLASSW, WS_OVERLAPPED,
     };
 
     const TRAY_ID: u32 = 1;
@@ -114,7 +114,11 @@ mod windows_impl {
             let open = wide("Open SonicForge editor");
             let _ = AppendMenuW(menu, MF_STRING, MENU_OPEN, PCWSTR(open.as_ptr()));
             let bypass = wide("Bypass processing");
-            let flags = if bypassed { MF_STRING | MF_CHECKED } else { MF_STRING };
+            let flags = if bypassed {
+                MF_STRING | MF_CHECKED
+            } else {
+                MF_STRING
+            };
             let _ = AppendMenuW(menu, flags, MENU_BYPASS, PCWSTR(bypass.as_ptr()));
             let reload = wide("Reload configuration");
             let _ = AppendMenuW(menu, MF_STRING, MENU_RELOAD, PCWSTR(reload.as_ptr()));

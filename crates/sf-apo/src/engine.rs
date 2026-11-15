@@ -7,8 +7,8 @@
 use sf_core::config::Document;
 use sf_core::control::{ControlBlock, ControlSnapshot};
 use sf_core::device::DeviceInfo;
-use sf_core::engine::{compile_document, CompileOptions, CompiledChain, Stage};
 use sf_core::engine::compiler_diagnostics;
+use sf_core::engine::{compile_document, CompileOptions, CompiledChain, Stage};
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
@@ -44,7 +44,13 @@ pub struct ApoEngine {
 impl ApoEngine {
     /// Creates an engine for `config_path`. The pipeline is built immediately
     /// if the file exists; failures leave the engine in pass-through mode.
-    pub fn new(config_path: PathBuf, device: DeviceInfo, sample_rate: u32, channels: usize, control: Option<ControlBlock>) -> Self {
+    pub fn new(
+        config_path: PathBuf,
+        device: DeviceInfo,
+        sample_rate: u32,
+        channels: usize,
+        control: Option<ControlBlock>,
+    ) -> Self {
         let mut engine = Self {
             config_path,
             device,
@@ -74,17 +80,22 @@ impl ApoEngine {
     }
 
     pub fn pipeline_channels(&self) -> usize {
-        self.chain.as_ref().map(|c| c.pipeline.channels()).unwrap_or(self.input_channels)
+        self.chain
+            .as_ref()
+            .map(|c| c.pipeline.channels())
+            .unwrap_or(self.input_channels)
     }
 
     pub fn diagnostics(&self) -> Vec<String> {
-        self.chain.as_ref().map(|c| {
-            c.diagnostics
-                .iter()
-                .map(|d| d.to_string())
-                .collect::<Vec<_>>()
-        })
-        .unwrap_or_default()
+        self.chain
+            .as_ref()
+            .map(|c| {
+                c.diagnostics
+                    .iter()
+                    .map(|d| d.to_string())
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default()
     }
 
     pub fn has_errors(&self) -> bool {
@@ -109,7 +120,11 @@ impl ApoEngine {
     /// Rebuilds the pipeline if the configuration file or the control block
     /// asked for it. Returns a report describing the outcome.
     pub fn reload(&mut self) -> ReloadReport {
-        let mut report = ReloadReport { sample_rate: self.sample_rate, channels: self.input_channels, ..Default::default() };
+        let mut report = ReloadReport {
+            sample_rate: self.sample_rate,
+            channels: self.input_channels,
+            ..Default::default()
+        };
         if !self.force_reload {
             return report;
         }
@@ -121,7 +136,9 @@ impl ApoEngine {
             Ok(t) => t,
             Err(e) => {
                 // Missing configuration is not an error: pass audio through.
-                report.diagnostics.push(format!("cannot read '{}': {e}", self.config_path.display()));
+                report
+                    .diagnostics
+                    .push(format!("cannot read '{}': {e}", self.config_path.display()));
                 self.chain = None;
                 self.latency_samples = 0;
                 self.mtime = mtime;
@@ -151,7 +168,9 @@ impl ApoEngine {
 
     /// True when the configuration file changed on disk.
     pub fn config_changed_on_disk(&self) -> bool {
-        let current = std::fs::metadata(&self.config_path).and_then(|m| m.modified()).ok();
+        let current = std::fs::metadata(&self.config_path)
+            .and_then(|m| m.modified())
+            .ok();
         current != self.mtime
     }
 
@@ -170,7 +189,9 @@ impl ApoEngine {
         if frames == 0 || channels == 0 || io.len() < frames * channels {
             return;
         }
-        let Some(chain) = self.chain.as_mut() else { return };
+        let Some(chain) = self.chain.as_mut() else {
+            return;
+        };
         let pipeline_channels = chain.pipeline.channels().max(channels);
 
         if self.planar.len() != pipeline_channels {
@@ -231,7 +252,10 @@ mod tests {
         let dir = std::env::temp_dir().join(format!(
             "sonicforge-apo-test-{}-{}",
             std::process::id(),
-            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
         ));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("config.txt");

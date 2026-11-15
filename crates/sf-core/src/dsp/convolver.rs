@@ -149,7 +149,9 @@ impl Convolver {
     /// Clears all internal state. The steady state latency is preserved.
     pub fn reset(&mut self) {
         self.history.iter_mut().for_each(|v| *v = 0.0);
-        self.spectra.iter_mut().for_each(|s| s.iter_mut().for_each(|v| *v = Complex64::ZERO));
+        self.spectra
+            .iter_mut()
+            .for_each(|s| s.iter_mut().for_each(|v| *v = Complex64::ZERO));
         self.spectrum_index = 0;
         self.spectra_filled = 0;
         self.input.clear();
@@ -172,7 +174,9 @@ impl Convolver {
         self.spectrum_index = (self.spectrum_index + 1) % slots;
         self.spectra_filled = (self.spectra_filled + 1).min(slots);
 
-        self.accumulator.iter_mut().for_each(|v| *v = Complex64::ZERO);
+        self.accumulator
+            .iter_mut()
+            .for_each(|v| *v = Complex64::ZERO);
         for (p, partition) in self.partitions.iter().enumerate() {
             if p >= self.spectra_filled {
                 break;
@@ -284,7 +288,10 @@ mod tests {
         let reference = direct(&input, &ir);
         let latency = 128;
         for i in latency..total {
-            assert!((output[i] - reference[i - latency]).abs() < 1e-3, "sample {i}");
+            assert!(
+                (output[i] - reference[i - latency]).abs() < 1e-3,
+                "sample {i}"
+            );
         }
     }
 

@@ -75,7 +75,11 @@ mod tests {
             &mut ch,
             &[MixAssignment {
                 target: 1,
-                terms: vec![MixTerm { gain: 1.0, source: Some(0), constant: 0.0 }],
+                terms: vec![MixTerm {
+                    gain: 1.0,
+                    source: Some(0),
+                    constant: 0.0,
+                }],
             }],
         );
         assert_eq!(ch[1], vec![1.0, 2.0, 3.0]);
@@ -89,11 +93,19 @@ mod tests {
             &[
                 MixAssignment {
                     target: 0,
-                    terms: vec![MixTerm { gain: 1.0, source: Some(1), constant: 0.0 }],
+                    terms: vec![MixTerm {
+                        gain: 1.0,
+                        source: Some(1),
+                        constant: 0.0,
+                    }],
                 },
                 MixAssignment {
                     target: 1,
-                    terms: vec![MixTerm { gain: 1.0, source: Some(0), constant: 0.0 }],
+                    terms: vec![MixTerm {
+                        gain: 1.0,
+                        source: Some(0),
+                        constant: 0.0,
+                    }],
                 },
             ],
         );
@@ -109,8 +121,16 @@ mod tests {
             &[MixAssignment {
                 target: 0,
                 terms: vec![
-                    MixTerm { gain: 1.0, source: Some(0), constant: 0.0 },
-                    MixTerm { gain: 0.5, source: Some(1), constant: 0.0 },
+                    MixTerm {
+                        gain: 1.0,
+                        source: Some(0),
+                        constant: 0.0,
+                    },
+                    MixTerm {
+                        gain: 0.5,
+                        source: Some(1),
+                        constant: 0.0,
+                    },
                 ],
             }],
         );
@@ -124,7 +144,11 @@ mod tests {
             &mut ch,
             &[MixAssignment {
                 target: 0,
-                terms: vec![MixTerm { gain: 1.0, source: None, constant: 0.5 }],
+                terms: vec![MixTerm {
+                    gain: 1.0,
+                    source: None,
+                    constant: 0.5,
+                }],
             }],
         );
         assert_eq!(ch[0], vec![0.5, 0.5]);
@@ -137,7 +161,11 @@ mod tests {
             &mut ch,
             &[MixAssignment {
                 target: 0,
-                terms: vec![MixTerm { gain: 1.0, source: Some(5), constant: 0.0 }],
+                terms: vec![MixTerm {
+                    gain: 1.0,
+                    source: Some(5),
+                    constant: 0.0,
+                }],
             }],
         );
         assert_eq!(ch[0], vec![0.0, 0.0]);

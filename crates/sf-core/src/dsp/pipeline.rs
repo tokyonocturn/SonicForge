@@ -62,16 +62,28 @@ impl Op {
     /// Number of biquad states the op needs for `channels` channels.
     fn prepare(&mut self, channels: usize) {
         match self {
-            Op::Biquad { mask, cascade, states } => {
+            Op::Biquad {
+                mask,
+                cascade,
+                states,
+            } => {
                 let count = selected(*mask, channels).count() * cascade.len();
                 states.resize(count, BiquadState::default());
             }
-            Op::Iir { mask, filter, states } => {
+            Op::Iir {
+                mask,
+                filter,
+                states,
+            } => {
                 let count = selected(*mask, channels).count();
                 let order = filter.order();
                 states.resize_with(count, || IirState::with_order(order));
             }
-            Op::Convolver { mask, convolvers, scratch } => {
+            Op::Convolver {
+                mask,
+                convolvers,
+                scratch,
+            } => {
                 let count = selected(*mask, channels).count();
                 if convolvers.len() == 1 && count > 1 {
                     let template = convolvers[0].clone();
@@ -115,7 +127,11 @@ pub struct Pipeline {
 
 impl Pipeline {
     pub fn new(sample_rate: u32, channels: usize) -> Self {
-        Self { sample_rate, channels, ops: Vec::new() }
+        Self {
+            sample_rate,
+            channels,
+            ops: Vec::new(),
+        }
     }
 
     pub fn sample_rate(&self) -> u32 {
@@ -189,7 +205,11 @@ impl Pipeline {
                         }
                     }
                 }
-                Op::Biquad { mask, cascade, states } => {
+                Op::Biquad {
+                    mask,
+                    cascade,
+                    states,
+                } => {
                     for (slot, c) in selected(*mask, buf.len()).enumerate() {
                         let base = slot * cascade.len();
                         if base + cascade.len() > states.len() {
@@ -201,14 +221,22 @@ impl Pipeline {
                         }
                     }
                 }
-                Op::Iir { mask, filter, states } => {
+                Op::Iir {
+                    mask,
+                    filter,
+                    states,
+                } => {
                     for (slot, c) in selected(*mask, buf.len()).enumerate() {
                         if let Some(state) = states.get_mut(slot) {
                             state.process_slice(filter, &mut buf[c]);
                         }
                     }
                 }
-                Op::Convolver { mask, convolvers, scratch } => {
+                Op::Convolver {
+                    mask,
+                    convolvers,
+                    scratch,
+                } => {
                     for (slot, c) in selected(*mask, buf.len()).enumerate() {
                         if slot >= convolvers.len() {
                             break;
@@ -293,7 +321,10 @@ mod tests {
     #[test]
     fn gain_op_scales_selected_channels_only() {
         let mut p = Pipeline::new(48000, 2);
-        p.push(Op::Gain { mask: 0b01, gain: 0.5 });
+        p.push(Op::Gain {
+            mask: 0b01,
+            gain: 0.5,
+        });
         let mut buf = vec![vec![1.0f32; 8], vec![1.0f32; 8]];
         p.process(&mut buf);
         assert!(buf[0].iter().all(|v| (v - 0.5).abs() < 1e-6));
@@ -332,7 +363,11 @@ mod tests {
     fn frequency_response_matches_filter_design() {
         let mut p = Pipeline::new(48000, 1);
         let bq = peak(1000.0, 6.0);
-        p.push(Op::Biquad { mask: 0b1, cascade: vec![bq], states: Vec::new() });
+        p.push(Op::Biquad {
+            mask: 0b1,
+            cascade: vec![bq],
+            states: Vec::new(),
+        });
         let resp = p.frequency_response(&[1000.0, 100.0]);
         assert!((resp[0] - bq.magnitude_db(1000.0, 48000.0)).abs() < 1e-6);
         assert!((resp[1] - bq.magnitude_db(100.0, 48000.0)).abs() < 1e-6);
@@ -345,8 +380,16 @@ mod tests {
             assignments: vec![MixAssignment {
                 target: 0,
                 terms: vec![
-                    crate::dsp::mixer::MixTerm { gain: 0.5, source: Some(0), constant: 0.0 },
-                    crate::dsp::mixer::MixTerm { gain: 0.5, source: Some(1), constant: 0.0 },
+                    crate::dsp::mixer::MixTerm {
+                        gain: 0.5,
+                        source: Some(0),
+                        constant: 0.0,
+                    },
+                    crate::dsp::mixer::MixTerm {
+                        gain: 0.5,
+                        source: Some(1),
+                        constant: 0.0,
+                    },
                 ],
             }],
         });

@@ -167,7 +167,9 @@ fn lex(src: &str) -> EvalResult<Vec<Token>> {
                     }
                 }
                 let text: String = chars[start..i].iter().collect();
-                let v: f64 = text.parse().map_err(|_| EvalError(format!("bad number '{text}'")))?;
+                let v: f64 = text
+                    .parse()
+                    .map_err(|_| EvalError(format!("bad number '{text}'")))?;
                 out.push(Token::Number(v, is_float));
             }
             c if c.is_alphabetic() || c == '_' => {
@@ -643,7 +645,9 @@ fn values_equal(a: &Value, b: &Value) -> bool {
     match (a, b) {
         (Value::Str(x), Value::Str(y)) => x == y,
         (Value::Bool(x), Value::Bool(y)) => x == y,
-        (Value::Array(x), Value::Array(y)) => x.len() == y.len() && x.iter().zip(y).all(|(a, b)| values_equal(a, b)),
+        (Value::Array(x), Value::Array(y)) => {
+            x.len() == y.len() && x.iter().zip(y).all(|(a, b)| values_equal(a, b))
+        }
         _ => match (a.as_f64(), b.as_f64()) {
             (Some(x), Some(y)) => (x - y).abs() < 1e-12,
             _ => false,
@@ -680,7 +684,10 @@ fn to_int(v: &Value) -> EvalResult<i64> {
         Value::Int(i) => Ok(*i),
         Value::Float(f) => Ok(*f as i64),
         Value::Bool(b) => Ok(if *b { 1 } else { 0 }),
-        other => err(format!("expected an integer, got type '{}'", other.type_char())),
+        other => err(format!(
+            "expected an integer, got type '{}'",
+            other.type_char()
+        )),
     }
 }
 
@@ -693,7 +700,9 @@ pub struct Env {
 
 impl Env {
     pub fn new() -> Self {
-        Self { vars: HashMap::new() }
+        Self {
+            vars: HashMap::new(),
+        }
     }
 
     /// Creates an environment describing the stream being compiled.
@@ -707,12 +716,22 @@ impl Env {
         stage: &str,
     ) -> Self {
         let mut env = Self::new();
-        env.vars.insert("sampleRate".into(), Value::Int(sample_rate as i64));
-        env.vars.insert("inputChannelCount".into(), Value::Int(input_channels as i64));
-        env.vars.insert("outputChannelCount".into(), Value::Int(output_channels as i64));
-        env.vars.insert("deviceName".into(), Value::Str(device_name.into()));
-        env.vars.insert("connectionName".into(), Value::Str(connection_name.into()));
-        env.vars.insert("deviceGuid".into(), Value::Str(device_guid.into()));
+        env.vars
+            .insert("sampleRate".into(), Value::Int(sample_rate as i64));
+        env.vars.insert(
+            "inputChannelCount".into(),
+            Value::Int(input_channels as i64),
+        );
+        env.vars.insert(
+            "outputChannelCount".into(),
+            Value::Int(output_channels as i64),
+        );
+        env.vars
+            .insert("deviceName".into(), Value::Str(device_name.into()));
+        env.vars
+            .insert("connectionName".into(), Value::Str(connection_name.into()));
+        env.vars
+            .insert("deviceGuid".into(), Value::Str(device_guid.into()));
         env.vars.insert("stage".into(), Value::Str(stage.into()));
         env
     }
@@ -728,7 +747,11 @@ impl Env {
     /// Evaluates `src`, mutating variables as needed.
     pub fn eval(&mut self, src: &str) -> EvalResult<Value> {
         let tokens = lex(src)?;
-        let mut parser = Parser { tokens, pos: 0, env: self };
+        let mut parser = Parser {
+            tokens,
+            pos: 0,
+            env: self,
+        };
         parser.parse_sequence()
     }
 
@@ -866,7 +889,9 @@ impl Env {
                     Some(caps) => {
                         let mut items = Vec::new();
                         for i in 0..caps.len() {
-                            items.push(Value::Str(caps.get(i).map(|m| m.as_str()).unwrap_or("").to_string()));
+                            items.push(Value::Str(
+                                caps.get(i).map(|m| m.as_str()).unwrap_or("").to_string(),
+                            ));
                         }
                         Ok(Value::Array(items))
                     }
@@ -880,11 +905,17 @@ impl Env {
                 let replacement = args[2].to_string();
                 let re = regex::Regex::new(&pattern)
                     .map_err(|e| EvalError(format!("invalid regular expression: {e}")))?;
-                Ok(Value::Str(re.replace_all(&haystack, replacement.as_str()).to_string()))
+                Ok(Value::Str(
+                    re.replace_all(&haystack, replacement.as_str()).to_string(),
+                ))
             }
             "readRegString" | "readRegDWORD" => {
                 need(2)?;
-                read_registry(&args[0].to_string(), &args[1].to_string(), name == "readRegDWORD")
+                read_registry(
+                    &args[0].to_string(),
+                    &args[1].to_string(),
+                    name == "readRegDWORD",
+                )
             }
             other => err(format!("unknown function '{other}'")),
         }
@@ -896,12 +927,15 @@ fn read_registry(key: &str, value: &str, as_dword: bool) -> EvalResult<Value> {
     use std::ffi::OsStr;
     use std::os::windows::ffi::OsStrExt;
     use windows_sys::Win32::System::Registry::{
-        RegCloseKey, RegOpenKeyExW, RegQueryValueExW, HKEY, HKEY_LOCAL_MACHINE, KEY_READ, REG_DWORD,
-        REG_SZ,
+        RegCloseKey, RegOpenKeyExW, RegQueryValueExW, HKEY, HKEY_LOCAL_MACHINE, KEY_READ,
+        REG_DWORD, REG_SZ,
     };
 
     fn wide(s: &str) -> Vec<u16> {
-        OsStr::new(s).encode_wide().chain(std::iter::once(0)).collect()
+        OsStr::new(s)
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect()
     }
 
     // Accept both `HKLM\...` and `HKEY_LOCAL_MACHINE\...`.
@@ -921,17 +955,30 @@ fn read_registry(key: &str, value: &str, as_dword: bool) -> EvalResult<Value> {
     let mut handle: HKEY = std::ptr::null_mut();
     let status = unsafe { RegOpenKeyExW(root, subkey.as_ptr(), 0, KEY_READ, &mut handle) };
     if status != 0 {
-        return Err(EvalError(format!("cannot open registry key '{key}' (error {status})")));
+        return Err(EvalError(format!(
+            "cannot open registry key '{key}' (error {status})"
+        )));
     }
     let name = wide(value);
     let mut ty: u32 = 0;
     let mut size: u32 = 0;
     let status = unsafe {
-        RegQueryValueExW(handle, name.as_ptr(), std::ptr::null_mut(), &mut ty, std::ptr::null_mut(), &mut size)
+        RegQueryValueExW(
+            handle,
+            name.as_ptr(),
+            std::ptr::null_mut(),
+            &mut ty,
+            std::ptr::null_mut(),
+            &mut size,
+        )
     };
     if status != 0 {
         unsafe { RegCloseKey(handle) };
-        return Ok(if as_dword { Value::Int(0) } else { Value::Str(String::new()) });
+        return Ok(if as_dword {
+            Value::Int(0)
+        } else {
+            Value::Str(String::new())
+        });
     }
     let mut buffer = vec![0u8; size as usize + 2];
     let mut size_mut = size;
@@ -947,7 +994,9 @@ fn read_registry(key: &str, value: &str, as_dword: bool) -> EvalResult<Value> {
     };
     unsafe { RegCloseKey(handle) };
     if status != 0 {
-        return Err(EvalError(format!("cannot read registry value '{value}' (error {status})")));
+        return Err(EvalError(format!(
+            "cannot read registry value '{value}' (error {status})"
+        )));
     }
     if ty == REG_DWORD {
         let bytes: [u8; 4] = buffer[..4].try_into().unwrap_or([0, 0, 0, 0]);
@@ -962,12 +1011,16 @@ fn read_registry(key: &str, value: &str, as_dword: bool) -> EvalResult<Value> {
         return Ok(Value::Str(String::from_utf16_lossy(&units)));
     }
     let _ = REG_SZ;
-    Err(EvalError(format!("registry value '{value}' has an unsupported type {ty}")))
+    Err(EvalError(format!(
+        "registry value '{value}' has an unsupported type {ty}"
+    )))
 }
 
 #[cfg(not(windows))]
 fn read_registry(_key: &str, _value: &str, _as_dword: bool) -> EvalResult<Value> {
-    Err(EvalError("registry access is only available on Windows".into()))
+    Err(EvalError(
+        "registry access is only available on Windows".into(),
+    ))
 }
 
 /// Expands inline backtick expressions inside a command parameter string.
@@ -1036,7 +1089,10 @@ mod tests {
     fn comparison_selects_the_larger_value() {
         let mut env = Env::new();
         env.eval("a=2; b=5").unwrap();
-        assert_eq!(env.eval("a > b ? \"a\" : \"b\"").unwrap(), Value::Str("b".into()));
+        assert_eq!(
+            env.eval("a > b ? \"a\" : \"b\"").unwrap(),
+            Value::Str("b".into())
+        );
     }
 
     #[test]
@@ -1049,7 +1105,11 @@ mod tests {
     fn inline_expression_can_use_variables() {
         let mut env = Env::new();
         env.eval("linGain = 0.5").unwrap();
-        let out = expand_inline("ON PK Fc 1000 Hz Gain `20*log10(linGain)` dB Q 10.0", &mut env).unwrap();
+        let out = expand_inline(
+            "ON PK Fc 1000 Hz Gain `20*log10(linGain)` dB Q 10.0",
+            &mut env,
+        )
+        .unwrap();
         assert_eq!(out, "ON PK Fc 1000 Hz Gain -6.020599913279624 dB Q 10.0");
     }
 
@@ -1062,8 +1122,12 @@ mod tests {
 
     #[test]
     fn regex_helpers() {
-        let v = eval("regexSearch(\"High Definition .*\", \"Speakers High Definition Audio Device\")");
-        assert_eq!(v, Value::Array(vec![Value::Str("High Definition Audio Device".into())]));
+        let v =
+            eval("regexSearch(\"High Definition .*\", \"Speakers High Definition Audio Device\")");
+        assert_eq!(
+            v,
+            Value::Array(vec![Value::Str("High Definition Audio Device".into())])
+        );
         let replaced = eval("regexReplace(\"o\", \"foo\", \"0\")");
         assert_eq!(replaced, Value::Str("f00".into()));
     }

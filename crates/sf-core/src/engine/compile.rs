@@ -7,7 +7,9 @@
 
 use super::Stage;
 use crate::config::expr::{expand_inline, Env};
-use crate::config::filter::{parse_copy, parse_delay, parse_filter, parse_graphic_eq, resolve_copy};
+use crate::config::filter::{
+    parse_copy, parse_delay, parse_filter, parse_graphic_eq, resolve_copy,
+};
 use crate::config::parser::{Command, ConfigLine, Diagnostic, Document, Severity};
 use crate::config::preset::Preset;
 use crate::device::{matches_device_list, ChannelLayout, DeviceInfo};
@@ -60,15 +62,23 @@ pub struct CompiledChain {
 
 impl CompiledChain {
     pub fn has_errors(&self) -> bool {
-        self.diagnostics.iter().any(|d| d.severity == Severity::Error)
+        self.diagnostics
+            .iter()
+            .any(|d| d.severity == Severity::Error)
     }
 
     pub fn error_count(&self) -> usize {
-        self.diagnostics.iter().filter(|d| d.severity == Severity::Error).count()
+        self.diagnostics
+            .iter()
+            .filter(|d| d.severity == Severity::Error)
+            .count()
     }
 
     pub fn warning_count(&self) -> usize {
-        self.diagnostics.iter().filter(|d| d.severity == Severity::Warning).count()
+        self.diagnostics
+            .iter()
+            .filter(|d| d.severity == Severity::Warning)
+            .count()
     }
 }
 
@@ -122,7 +132,11 @@ impl<'a> Compiler<'a> {
             pipeline,
             diagnostics: Vec::new(),
             device_active: true,
-            channel_mask: if channels >= 64 { u64::MAX } else { (1u64 << channels) - 1 },
+            channel_mask: if channels >= 64 {
+                u64::MAX
+            } else {
+                (1u64 << channels) - 1
+            },
             stage_active: true,
             include_stack: Vec::new(),
             current_file: None,
@@ -163,7 +177,11 @@ impl<'a> Compiler<'a> {
             return Some(idx);
         }
         let looks_virtual = token.len() >= 2
-            && token.chars().next().map(|c| c.is_ascii_alphabetic()).unwrap_or(false)
+            && token
+                .chars()
+                .next()
+                .map(|c| c.is_ascii_alphabetic())
+                .unwrap_or(false)
             && token.chars().any(|c| c.is_ascii_digit());
         if looks_virtual {
             let idx = self.max_channels;
@@ -208,7 +226,10 @@ impl<'a> Compiler<'a> {
                                 match self.env.eval(&cond) {
                                     Ok(v) => v.as_bool(),
                                     Err(e) => {
-                                        self.error(lines[*start].line_no, format!("invalid condition: {e}"));
+                                        self.error(
+                                            lines[*start].line_no,
+                                            format!("invalid condition: {e}"),
+                                        );
                                         false
                                     }
                                 }
@@ -246,7 +267,11 @@ impl<'a> Compiler<'a> {
                 self.device_active = matches_device_list(&line.params, &self.options.device);
             }
             Command::Channel => {
-                let tokens: Vec<String> = line.params.split_whitespace().map(|s| s.to_string()).collect();
+                let tokens: Vec<String> = line
+                    .params
+                    .split_whitespace()
+                    .map(|s| s.to_string())
+                    .collect();
                 if tokens.is_empty() {
                     self.warn(line_no, "Channel command without channels");
                     return;
@@ -267,7 +292,11 @@ impl<'a> Compiler<'a> {
                 }
                 if all || mask == 0 {
                     let channels = self.pipeline.channels().min(64);
-                    mask = if channels >= 64 { u64::MAX } else { (1u64 << channels) - 1 };
+                    mask = if channels >= 64 {
+                        u64::MAX
+                    } else {
+                        (1u64 << channels) - 1
+                    };
                 }
                 self.channel_mask = mask;
             }
@@ -287,17 +316,28 @@ impl<'a> Compiler<'a> {
             }
             _ if !self.active() => {}
             Command::Preamp => {
-                let Some(params) = self.expand(&line.params, line_no) else { return };
-                match params.split_whitespace().next().and_then(crate::config::filter::parse_f64) {
+                let Some(params) = self.expand(&line.params, line_no) else {
+                    return;
+                };
+                match params
+                    .split_whitespace()
+                    .next()
+                    .and_then(crate::config::filter::parse_f64)
+                {
                     Some(db) => {
                         let gain = 10f64.powf(db / 20.0) as f32;
-                        self.pipeline.push(Op::Gain { mask: self.channel_mask, gain });
+                        self.pipeline.push(Op::Gain {
+                            mask: self.channel_mask,
+                            gain,
+                        });
                     }
                     None => self.error(line_no, format!("invalid preamp value '{}'", line.params)),
                 }
             }
             Command::Filter => {
-                let Some(params) = self.expand(&line.params, line_no) else { return };
+                let Some(params) = self.expand(&line.params, line_no) else {
+                    return;
+                };
                 match parse_filter(&params) {
                     Ok(cmd) => {
                         if !cmd.enabled {
@@ -339,27 +379,38 @@ impl<'a> Compiler<'a> {
                 }
             }
             Command::GraphicEq => {
-                let Some(params) = self.expand(&line.params, line_no) else { return };
+                let Some(params) = self.expand(&line.params, line_no) else {
+                    return;
+                };
                 match parse_graphic_eq(&params) {
                     Ok(points) => {
                         if points.len() > crate::dsp::graphic_eq::MAX_POINTS {
                             self.warn(
                                 line_no,
-                                format!("graphic EQ has more than {} bands; extra bands ignored", crate::dsp::graphic_eq::MAX_POINTS),
+                                format!(
+                                    "graphic EQ has more than {} bands; extra bands ignored",
+                                    crate::dsp::graphic_eq::MAX_POINTS
+                                ),
                             );
                         }
                         let cascade = design_graphic_eq(&points, self.options.sample_rate as f64);
                         if cascade.is_empty() {
                             self.warn(line_no, "graphic EQ has no usable bands");
                         } else {
-                            self.pipeline.push(Op::Biquad { mask: self.channel_mask, cascade, states: Vec::new() });
+                            self.pipeline.push(Op::Biquad {
+                                mask: self.channel_mask,
+                                cascade,
+                                states: Vec::new(),
+                            });
                         }
                     }
                     Err(e) => self.error(line_no, format!("invalid GraphicEQ command: {e}")),
                 }
             }
             Command::Convolution => {
-                let Some(params) = self.expand(&line.params, line_no) else { return };
+                let Some(params) = self.expand(&line.params, line_no) else {
+                    return;
+                };
                 let file_name = params.trim().trim_matches('"');
                 if file_name.is_empty() {
                     self.error(line_no, "Convolution without a file name");
@@ -390,7 +441,10 @@ impl<'a> Compiler<'a> {
                             return;
                         }
                         if audio.channel_count() == 0 || audio.frames() == 0 {
-                            self.error(line_no, format!("impulse response '{}' is empty", path.display()));
+                            self.error(
+                                line_no,
+                                format!("impulse response '{}' is empty", path.display()),
+                            );
                             return;
                         }
                         let mut convolvers = Vec::new();
@@ -416,14 +470,21 @@ impl<'a> Compiler<'a> {
                 }
             }
             Command::Delay => {
-                let Some(params) = self.expand(&line.params, line_no) else { return };
+                let Some(params) = self.expand(&line.params, line_no) else {
+                    return;
+                };
                 match parse_delay(&params) {
                     Ok(delay) => {
                         let samples = delay.to_samples(self.options.sample_rate);
-                        if samples > crate::dsp::delay::MAX_DELAY_SECONDS * self.options.sample_rate as f64 {
+                        if samples
+                            > crate::dsp::delay::MAX_DELAY_SECONDS * self.options.sample_rate as f64
+                        {
                             self.error(
                                 line_no,
-                                format!("delay of {samples} samples exceeds the {} s limit", crate::dsp::delay::MAX_DELAY_SECONDS),
+                                format!(
+                                    "delay of {samples} samples exceeds the {} s limit",
+                                    crate::dsp::delay::MAX_DELAY_SECONDS
+                                ),
                             );
                             return;
                         }
@@ -436,14 +497,19 @@ impl<'a> Compiler<'a> {
                             }
                         }
                         if count > 0 {
-                            self.pipeline.push(Op::Delay { mask: self.channel_mask, lines });
+                            self.pipeline.push(Op::Delay {
+                                mask: self.channel_mask,
+                                lines,
+                            });
                         }
                     }
                     Err(e) => self.error(line_no, format!("invalid Delay command: {e}")),
                 }
             }
             Command::Copy => {
-                let Some(params) = self.expand(&line.params, line_no) else { return };
+                let Some(params) = self.expand(&line.params, line_no) else {
+                    return;
+                };
                 match parse_copy(&params) {
                     Ok(cmds) => {
                         let mut assignments = Vec::new();
@@ -480,7 +546,9 @@ impl<'a> Compiler<'a> {
                             }
                         }
                         if !assignments.is_empty() {
-                            let needed = (highest + 1).max(self.max_channels).max(self.pipeline.channels());
+                            let needed = (highest + 1)
+                                .max(self.max_channels)
+                                .max(self.pipeline.channels());
                             if needed > self.pipeline.channels() {
                                 self.pipeline.set_channels(needed);
                                 self.max_channels = needed;
@@ -498,14 +566,24 @@ impl<'a> Compiler<'a> {
                     .as_ref()
                     .and_then(|p| p.parent().map(|d| d.to_path_buf()))
                     .unwrap_or_else(|| PathBuf::from("."));
-                let path = if Path::new(name).is_absolute() { PathBuf::from(name) } else { base.join(name) };
+                let path = if Path::new(name).is_absolute() {
+                    PathBuf::from(name)
+                } else {
+                    base.join(name)
+                };
                 let canonical = std::fs::canonicalize(&path).unwrap_or_else(|_| path.clone());
                 if self.include_stack.iter().any(|p| p == &canonical) {
                     self.error(line_no, format!("circular Include of '{}'", path.display()));
                     return;
                 }
                 if self.include_stack.len() >= self.options.max_include_depth {
-                    self.error(line_no, format!("Include depth limit ({}) reached", self.options.max_include_depth));
+                    self.error(
+                        line_no,
+                        format!(
+                            "Include depth limit ({}) reached",
+                            self.options.max_include_depth
+                        ),
+                    );
                     return;
                 }
                 match Document::load(&path) {
@@ -518,7 +596,9 @@ impl<'a> Compiler<'a> {
                         self.run_lines(&doc.lines, file_for_lines.as_deref());
                         self.include_stack.pop();
                     }
-                    Err(e) => self.error(line_no, format!("cannot include '{}': {e}", path.display())),
+                    Err(e) => {
+                        self.error(line_no, format!("cannot include '{}': {e}", path.display()))
+                    }
                 }
             }
             Command::Eval => {
@@ -531,7 +611,10 @@ impl<'a> Compiler<'a> {
                 self.error(line_no, "VST plugin hosting is not available in this build");
             }
             Command::LoudnessCorrection => {
-                self.warn(line_no, "LoudnessCorrection is not implemented and was ignored");
+                self.warn(
+                    line_no,
+                    "LoudnessCorrection is not implemented and was ignored",
+                );
             }
             Command::Comment | Command::Unknown => {}
             Command::If | Command::ElseIf | Command::Else | Command::EndIf => {}
@@ -543,7 +626,10 @@ impl<'a> Compiler<'a> {
         let channels = self.pipeline.channels().max(self.max_channels);
         if channels != self.pipeline.channels() {
             self.pipeline.set_channels(channels);
-            self.env.set("outputChannelCount", crate::config::Value::Int(channels as i64));
+            self.env.set(
+                "outputChannelCount",
+                crate::config::Value::Int(channels as i64),
+            );
         }
         self.diagnostics.sort_by(|a, b| a.line.cmp(&b.line));
         CompiledChain {
@@ -597,7 +683,11 @@ mod tests {
     use crate::dsp::pipeline::Op;
 
     fn opts() -> CompileOptions {
-        CompileOptions { sample_rate: 48000, channels: 2, ..Default::default() }
+        CompileOptions {
+            sample_rate: 48000,
+            channels: 2,
+            ..Default::default()
+        }
     }
 
     fn compile(text: &str) -> CompiledChain {
@@ -670,7 +760,8 @@ mod tests {
 
     #[test]
     fn eval_variables_feed_inline_expressions() {
-        let text = "Eval: linGain = 0.5\nFilter: ON PK Fc 1000 Hz Gain `20*log10(linGain)` dB Q 10.0\n";
+        let text =
+            "Eval: linGain = 0.5\nFilter: ON PK Fc 1000 Hz Gain `20*log10(linGain)` dB Q 10.0\n";
         let chain = compile(text);
         assert_eq!(chain.pipeline.ops().len(), 1);
         assert!(chain.diagnostics.is_empty(), "{:?}", chain.diagnostics);
@@ -713,9 +804,17 @@ mod tests {
 
     #[test]
     fn copy_expands_virtual_channels() {
-        let chain = compile("Copy: L2=L R2=R\nChannel: L2 R2\nDelay: 10 ms\nCopy: L=0.5*L+0.5*L2\n");
+        let chain =
+            compile("Copy: L2=L R2=R\nChannel: L2 R2\nDelay: 10 ms\nCopy: L=0.5*L+0.5*L2\n");
         assert_eq!(chain.pipeline.channels(), 4);
-        assert!(chain.diagnostics.iter().all(|d| d.severity != Severity::Error), "{:?}", chain.diagnostics);
+        assert!(
+            chain
+                .diagnostics
+                .iter()
+                .all(|d| d.severity != Severity::Error),
+            "{:?}",
+            chain.diagnostics
+        );
         assert_eq!(chain.pipeline.ops().len(), 3);
     }
 
@@ -757,7 +856,11 @@ mod tests {
     fn include_loads_relative_files() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(dir.path().join("inner.txt"), "Preamp: -3 dB\n").unwrap();
-        std::fs::write(dir.path().join("config.txt"), "Channel: L\nInclude: inner.txt\n").unwrap();
+        std::fs::write(
+            dir.path().join("config.txt"),
+            "Channel: L\nInclude: inner.txt\n",
+        )
+        .unwrap();
         let chain = compile_file(&dir.path().join("config.txt"), &opts()).unwrap();
         assert_eq!(chain.pipeline.ops().len(), 1);
         match &chain.pipeline.ops()[0] {
@@ -773,7 +876,10 @@ mod tests {
         std::fs::write(dir.path().join("b.txt"), "Include: a.txt\n").unwrap();
         let chain = compile_file(&dir.path().join("a.txt"), &opts()).unwrap();
         assert!(chain.error_count() >= 1);
-        assert!(chain.diagnostics.iter().any(|d| d.message.contains("circular")));
+        assert!(chain
+            .diagnostics
+            .iter()
+            .any(|d| d.message.contains("circular")));
     }
 
     #[test]

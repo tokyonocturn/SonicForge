@@ -66,7 +66,10 @@ pub struct Fft {
 impl Fft {
     /// Creates a transform for `n` samples. `n` must be a power of two.
     pub fn new(n: usize) -> Self {
-        assert!(n.is_power_of_two(), "FFT size must be a power of two, got {n}");
+        assert!(
+            n.is_power_of_two(),
+            "FFT size must be a power of two, got {n}"
+        );
         let bits = n.trailing_zeros();
         let mut rev = vec![0u32; n];
         for (i, slot) in rev.iter_mut().enumerate() {
@@ -146,7 +149,10 @@ pub struct RealFft {
 
 impl RealFft {
     pub fn new(n: usize) -> Self {
-        assert!(n.is_power_of_two() && n >= 4, "real FFT size must be a power of two >= 4");
+        assert!(
+            n.is_power_of_two() && n >= 4,
+            "real FFT size must be a power of two >= 4"
+        );
         let half = Fft::new(n / 2);
         let mut twiddles = Vec::with_capacity(n / 2);
         for k in 0..n / 2 {
@@ -280,7 +286,9 @@ mod tests {
     fn real_fft_roundtrip_is_exact() {
         for &n in &[16usize, 128, 1024] {
             let rfft = RealFft::new(n);
-            let input: Vec<f64> = (0..n).map(|i| ((i * 7919) % 101) as f64 / 101.0 - 0.5).collect();
+            let input: Vec<f64> = (0..n)
+                .map(|i| ((i * 7919) % 101) as f64 / 101.0 - 0.5)
+                .collect();
             let mut spec = vec![Complex64::ZERO; rfft.bins()];
             rfft.forward(&input, &mut spec);
             let mut back = vec![0.0; n];

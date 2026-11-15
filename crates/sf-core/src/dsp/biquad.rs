@@ -14,7 +14,13 @@ pub struct Biquad {
 }
 
 impl Biquad {
-    pub const IDENTITY: Biquad = Biquad { b0: 1.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0 };
+    pub const IDENTITY: Biquad = Biquad {
+        b0: 1.0,
+        b1: 0.0,
+        b2: 0.0,
+        a1: 0.0,
+        a2: 0.0,
+    };
 
     /// Normalises raw coefficients by `a0`.
     pub fn new(b: [f64; 3], a: [f64; 3]) -> Self {
@@ -42,8 +48,14 @@ impl Biquad {
     pub fn response(&self, w: f64) -> Complex64 {
         let (s1, c1) = w.sin_cos();
         let (s2, c2) = (2.0 * w).sin_cos();
-        let num = Complex64::new(self.b0 + self.b1 * c1 + self.b2 * c2, -(self.b1 * s1 + self.b2 * s2));
-        let den = Complex64::new(1.0 + self.a1 * c1 + self.a2 * c2, -(self.a1 * s1 + self.a2 * s2));
+        let num = Complex64::new(
+            self.b0 + self.b1 * c1 + self.b2 * c2,
+            -(self.b1 * s1 + self.b2 * s2),
+        );
+        let den = Complex64::new(
+            1.0 + self.a1 * c1 + self.a2 * c2,
+            -(self.a1 * s1 + self.a2 * s2),
+        );
         let d = den.re * den.re + den.im * den.im;
         if d < 1e-300 {
             return Complex64::new(f64::INFINITY, 0.0);
@@ -170,7 +182,11 @@ impl IirFilter {
     }
 
     pub fn magnitude_db(&self, freq: f64, sample_rate: f64) -> f64 {
-        20.0 * self.response(2.0 * PI * freq / sample_rate).norm().max(1e-12).log10()
+        20.0 * self
+            .response(2.0 * PI * freq / sample_rate)
+            .norm()
+            .max(1e-12)
+            .log10()
     }
 }
 
@@ -182,7 +198,9 @@ pub struct IirState {
 
 impl IirState {
     pub fn with_order(order: usize) -> Self {
-        Self { z: vec![0.0; order] }
+        Self {
+            z: vec![0.0; order],
+        }
     }
 
     pub fn reset(&mut self) {

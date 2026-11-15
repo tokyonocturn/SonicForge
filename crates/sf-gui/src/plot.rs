@@ -44,7 +44,9 @@ pub fn unit_to_db(unit: f64) -> f64 {
 }
 
 /// Tick frequencies drawn on the graph.
-pub const FREQ_TICKS: [f64; 10] = [20.0, 50.0, 100.0, 200.0, 500.0, 1000.0, 2000.0, 5000.0, 10000.0, 20000.0];
+pub const FREQ_TICKS: [f64; 10] = [
+    20.0, 50.0, 100.0, 200.0, 500.0, 1000.0, 2000.0, 5000.0, 10000.0, 20000.0,
+];
 
 /// Tick gains drawn on the graph.
 pub const DB_TICKS: [f64; 7] = [-24.0, -12.0, -6.0, 0.0, 6.0, 12.0, 24.0];

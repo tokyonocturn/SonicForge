@@ -43,8 +43,12 @@ impl Endpoint {
     /// `{0.0.0.00000000}.{1a2b3c4d-...}`.
     pub fn guid_from_id(id: &str) -> String {
         match id.rsplit_once('.') {
-            Some((_, guid)) => guid.trim_matches(|c| c == '{' || c == '}').to_ascii_lowercase(),
-            None => id.trim_matches(|c| c == '{' || c == '}').to_ascii_lowercase(),
+            Some((_, guid)) => guid
+                .trim_matches(|c| c == '{' || c == '}')
+                .to_ascii_lowercase(),
+            None => id
+                .trim_matches(|c| c == '{' || c == '}')
+                .to_ascii_lowercase(),
         }
     }
 
@@ -69,11 +73,11 @@ pub fn list(flow: Flow) -> Result<Vec<Endpoint>, String> {
     use windows::Win32::Media::Audio::{
         eCapture, eConsole, eRender, IMMDeviceEnumerator, MMDeviceEnumerator, DEVICE_STATE_ACTIVE,
     };
+    use windows::Win32::System::Com::StructuredStorage::PropVariantToStringAlloc;
     use windows::Win32::System::Com::{
         CoCreateInstance, CoInitializeEx, CoUninitialize, CLSCTX_ALL, COINIT_MULTITHREADED,
         STGM_READ,
     };
-    use windows::Win32::System::Com::StructuredStorage::PropVariantToStringAlloc;
 
     unsafe {
         let hr = CoInitializeEx(None, COINIT_MULTITHREADED);
@@ -101,7 +105,9 @@ pub fn list(flow: Flow) -> Result<Vec<Endpoint>, String> {
             let count = collection.GetCount().unwrap_or(0);
             let mut endpoints = Vec::with_capacity(count as usize);
             for index in 0..count {
-                let Ok(device) = collection.Item(index) else { continue };
+                let Ok(device) = collection.Item(index) else {
+                    continue;
+                };
                 let Ok(id_ptr) = device.GetId() else { continue };
                 let Ok(id) = id_ptr.to_string() else { continue };
                 let store = match device.OpenPropertyStore(STGM_READ) {
@@ -164,9 +170,9 @@ pub fn find(flow: Flow, selector: &str) -> Result<Option<Endpoint>, String> {
     {
         return Ok(Some(exact.clone()));
     }
-    Ok(endpoints
-        .into_iter()
-        .find(|e| e.name.to_lowercase().contains(&lower) || e.connection.to_lowercase().contains(&lower)))
+    Ok(endpoints.into_iter().find(|e| {
+        e.name.to_lowercase().contains(&lower) || e.connection.to_lowercase().contains(&lower)
+    }))
 }
 
 /// The default endpoint of a flow, if any.

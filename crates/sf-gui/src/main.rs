@@ -182,7 +182,11 @@ impl Editor {
     }
 
     fn apply(&mut self) {
-        let text = if self.show_text { self.text.clone() } else { self.compose_text() };
+        let text = if self.show_text {
+            self.text.clone()
+        } else {
+            self.compose_text()
+        };
         if self.config_path.exists() {
             let backup = self.config_path.with_extension("txt.bak");
             if let Err(e) = std::fs::copy(&self.config_path, &backup) {
@@ -222,7 +226,10 @@ impl Editor {
             self.preset = preset;
             self.selected = None;
             self.recompute();
-            self.status = format!("Preset '{}' loaded (press Apply to write it)", self.preset.name);
+            self.status = format!(
+                "Preset '{}' loaded (press Apply to write it)",
+                self.preset.name
+            );
         }
     }
 
@@ -273,7 +280,10 @@ impl Editor {
             } else {
                 egui::Stroke::new(1.0_f32, GRID)
             };
-            painter.line_segment([egui::pos2(rect.left(), y), egui::pos2(rect.right(), y)], stroke);
+            painter.line_segment(
+                [egui::pos2(rect.left(), y), egui::pos2(rect.right(), y)],
+                stroke,
+            );
             painter.text(
                 egui::pos2(rect.left() + 4.0, y),
                 egui::Align2::LEFT_TOP,
@@ -291,7 +301,10 @@ impl Editor {
                 .zip(self.response.iter())
                 .map(|(f, db)| egui::pos2(x_of(*f), y_of(*db)))
                 .collect();
-            painter.add(egui::Shape::line(points.clone(), egui::Stroke::new(2.0_f32, CURVE)));
+            painter.add(egui::Shape::line(
+                points.clone(),
+                egui::Stroke::new(2.0_f32, CURVE),
+            ));
             // Shade between the curve and 0 dB for readability.
             let baseline = y_of(0.0);
             let mut polygon = points.clone();
@@ -310,7 +323,11 @@ impl Editor {
             let selected = self.selected == Some(index);
             let radius = if selected { 7.0 } else { 5.0 };
             let color = if band.enabled {
-                if selected { ACCENT } else { CURVE }
+                if selected {
+                    ACCENT
+                } else {
+                    CURVE
+                }
             } else {
                 TEXT_DIM
             };
@@ -320,7 +337,11 @@ impl Editor {
                 painter.text(
                     egui::pos2(pos.x + 12.0, pos.y - 8.0),
                     egui::Align2::LEFT_TOP,
-                    format!("{} Hz  {} dB", band.freq.round(), plot::db_label(band.gain_db)),
+                    format!(
+                        "{} Hz  {} dB",
+                        band.freq.round(),
+                        plot::db_label(band.gain_db)
+                    ),
                     egui::FontId::proportional(12.0),
                     ACCENT,
                 );
@@ -502,9 +523,7 @@ impl eframe::App for Editor {
         egui::TopBottomPanel::top("toolbar").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 ui.heading("SonicForge");
-                ui.label(
-                    egui::RichText::new(format!("v{}", sf_core::VERSION)).color(TEXT_DIM),
-                );
+                ui.label(egui::RichText::new(format!("v{}", sf_core::VERSION)).color(TEXT_DIM));
                 ui.separator();
                 let mut bypass = self.bypass;
                 if ui.checkbox(&mut bypass, "Bypass").changed() {

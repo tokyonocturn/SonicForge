@@ -35,7 +35,12 @@ pub struct Diagnostic {
 
 impl Diagnostic {
     pub fn new(severity: Severity, line: usize, message: impl Into<String>) -> Self {
-        Self { severity, line, file: None, message: message.into() }
+        Self {
+            severity,
+            line,
+            file: None,
+            message: message.into(),
+        }
     }
 
     pub fn with_file(mut self, file: impl Into<PathBuf>) -> Self {
@@ -46,7 +51,18 @@ impl Diagnostic {
 
 impl std::fmt::Display for Diagnostic {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}:{}: {}: {}", if let Some(p) = &self.file { p.display().to_string() } else { "<config>".into() }, self.line, self.severity.as_str(), self.message)
+        write!(
+            f,
+            "{}:{}: {}: {}",
+            if let Some(p) = &self.file {
+                p.display().to_string()
+            } else {
+                "<config>".into()
+            },
+            self.line,
+            self.severity.as_str(),
+            self.message
+        )
     }
 }
 
@@ -106,9 +122,11 @@ impl Command {
                 // can warn about it.
                 let lower = base.to_lowercase();
                 match lower.as_str() {
-                    "preamp" | "filter" | "graphiceq" | "convolution" | "copy" | "delay" | "channel"
-                    | "device" | "stage" | "include" | "if" | "elseif" | "else" | "endif" | "eval"
-                    | "vstplugin" | "loudnesscorrection" | "comment" => Command::Unknown,
+                    "preamp" | "filter" | "graphiceq" | "convolution" | "copy" | "delay"
+                    | "channel" | "device" | "stage" | "include" | "if" | "elseif" | "else"
+                    | "endif" | "eval" | "vstplugin" | "loudnesscorrection" | "comment" => {
+                        Command::Unknown
+                    }
                     _ => return None,
                 }
             }
@@ -169,7 +187,10 @@ impl Document {
                 doc.issues.push(Diagnostic::new(
                     Severity::Warning,
                     line_no,
-                    format!("unknown command '{}' ignored (commands are case sensitive)", name),
+                    format!(
+                        "unknown command '{}' ignored (commands are case sensitive)",
+                        name
+                    ),
                 ));
                 continue;
             }
@@ -213,7 +234,10 @@ mod tests {
         let doc = Document::parse("Filter  1: ON  PK  Fc 50.0 Hz  Gain -10.0 dB  Q 2.5\n");
         assert_eq!(doc.lines.len(), 1);
         assert_eq!(doc.lines[0].command, Command::Filter);
-        assert_eq!(doc.lines[0].params, "ON  PK  Fc 50.0 Hz  Gain -10.0 dB  Q 2.5");
+        assert_eq!(
+            doc.lines[0].params,
+            "ON  PK  Fc 50.0 Hz  Gain -10.0 dB  Q 2.5"
+        );
     }
 
     #[test]

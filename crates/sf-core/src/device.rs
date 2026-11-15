@@ -22,8 +22,17 @@ pub enum Flow {
 }
 
 impl DeviceInfo {
-    pub fn new(name: impl Into<String>, connection: impl Into<String>, guid: impl Into<String>) -> Self {
-        Self { name: name.into(), connection: connection.into(), guid: guid.into(), flow: Flow::Render }
+    pub fn new(
+        name: impl Into<String>,
+        connection: impl Into<String>,
+        guid: impl Into<String>,
+    ) -> Self {
+        Self {
+            name: name.into(),
+            connection: connection.into(),
+            guid: guid.into(),
+            flow: Flow::Render,
+        }
     }
 
     /// The string `Device:` patterns are matched against: name, connection and
@@ -99,7 +108,11 @@ impl ChannelLayout {
             return None;
         }
         if let Ok(n) = token.parse::<usize>() {
-            return if n >= 1 && n <= channels { Some(n - 1) } else { None };
+            return if n >= 1 && n <= channels {
+                Some(n - 1)
+            } else {
+                None
+            };
         }
         if token.eq_ignore_ascii_case("all") {
             return None;

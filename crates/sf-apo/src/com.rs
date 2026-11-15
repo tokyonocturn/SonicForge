@@ -26,15 +26,15 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicU32, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use windows::core::{GUID, HRESULT, IUnknown, Interface};
+use windows::core::{IUnknown, Interface, GUID, HRESULT};
 use windows::Win32::Foundation::{
     CLASS_E_CLASSNOTAVAILABLE, CLASS_E_NOAGGREGATION, E_FAIL, E_INVALIDARG, E_NOINTERFACE,
     E_OUTOFMEMORY, E_POINTER, S_FALSE, S_OK,
 };
 use windows::Win32::Media::Audio::Apo::{
-    IAudioMediaType, IAudioProcessingObject, IAudioProcessingObjectConfiguration,
-    IAudioProcessingObjectRT, APO_CONNECTION_DESCRIPTOR, APO_CONNECTION_PROPERTY, APO_FLAG_DEFAULT,
-    APO_REG_PROPERTIES, APOInitBaseStruct, APOInitSystemEffects,
+    APOInitBaseStruct, APOInitSystemEffects, IAudioMediaType, IAudioProcessingObject,
+    IAudioProcessingObjectConfiguration, IAudioProcessingObjectRT, APO_CONNECTION_DESCRIPTOR,
+    APO_CONNECTION_PROPERTY, APO_FLAG_DEFAULT, APO_REG_PROPERTIES,
 };
 use windows::Win32::System::Com::StructuredStorage::PropVariantToStringAlloc;
 use windows::Win32::System::Com::{CoTaskMemAlloc, IClassFactory};
@@ -63,23 +63,34 @@ fn open_control() -> Option<ControlBlock> {
 
 #[repr(C)]
 struct ApoVtbl {
-    query_interface: unsafe extern "system" fn(*mut c_void, *const GUID, *mut *mut c_void) -> HRESULT,
+    query_interface:
+        unsafe extern "system" fn(*mut c_void, *const GUID, *mut *mut c_void) -> HRESULT,
     add_ref: unsafe extern "system" fn(*mut c_void) -> u32,
     release: unsafe extern "system" fn(*mut c_void) -> u32,
     reset: unsafe extern "system" fn(*mut c_void) -> HRESULT,
     get_latency: unsafe extern "system" fn(*mut c_void, *mut i64) -> HRESULT,
-    get_registration_properties: unsafe extern "system" fn(*mut c_void, *mut *mut APO_REG_PROPERTIES) -> HRESULT,
+    get_registration_properties:
+        unsafe extern "system" fn(*mut c_void, *mut *mut APO_REG_PROPERTIES) -> HRESULT,
     initialize: unsafe extern "system" fn(*mut c_void, u32, *const u8) -> HRESULT,
-    is_input_format_supported:
-        unsafe extern "system" fn(*mut c_void, *mut c_void, *mut c_void, *mut *mut c_void) -> HRESULT,
-    is_output_format_supported:
-        unsafe extern "system" fn(*mut c_void, *mut c_void, *mut c_void, *mut *mut c_void) -> HRESULT,
+    is_input_format_supported: unsafe extern "system" fn(
+        *mut c_void,
+        *mut c_void,
+        *mut c_void,
+        *mut *mut c_void,
+    ) -> HRESULT,
+    is_output_format_supported: unsafe extern "system" fn(
+        *mut c_void,
+        *mut c_void,
+        *mut c_void,
+        *mut *mut c_void,
+    ) -> HRESULT,
     get_input_channel_count: unsafe extern "system" fn(*mut c_void, *mut u32) -> HRESULT,
 }
 
 #[repr(C)]
 struct ConfigVtbl {
-    query_interface: unsafe extern "system" fn(*mut c_void, *const GUID, *mut *mut c_void) -> HRESULT,
+    query_interface:
+        unsafe extern "system" fn(*mut c_void, *const GUID, *mut *mut c_void) -> HRESULT,
     add_ref: unsafe extern "system" fn(*mut c_void) -> u32,
     release: unsafe extern "system" fn(*mut c_void) -> u32,
     lock_for_process: unsafe extern "system" fn(
@@ -94,7 +105,8 @@ struct ConfigVtbl {
 
 #[repr(C)]
 struct RtVtbl {
-    query_interface: unsafe extern "system" fn(*mut c_void, *const GUID, *mut *mut c_void) -> HRESULT,
+    query_interface:
+        unsafe extern "system" fn(*mut c_void, *const GUID, *mut *mut c_void) -> HRESULT,
     add_ref: unsafe extern "system" fn(*mut c_void) -> u32,
     release: unsafe extern "system" fn(*mut c_void) -> u32,
     apo_process: unsafe extern "system" fn(
@@ -178,7 +190,9 @@ fn spawn_reload_thread(shared: &Arc<Shared>) {
         if shared.running.load(Ordering::Relaxed) == 0 {
             return;
         }
-        let Ok(mut engine) = shared.engine.lock() else { return };
+        let Ok(mut engine) = shared.engine.lock() else {
+            return;
+        };
         engine.sync_control();
         if engine.config_changed_on_disk() {
             engine.invalidate();
@@ -274,7 +288,10 @@ unsafe extern "system" fn apo_get_registration_properties(
     props.clsid = APO_CLSID_GUID;
     props.Flags = APO_FLAG_DEFAULT;
     write_wide(&mut props.szFriendlyName, APO_FRIENDLY_NAME);
-    write_wide(&mut props.szCopyrightInfo, "SonicForge contributors, GPL-2.0-or-later");
+    write_wide(
+        &mut props.szCopyrightInfo,
+        "SonicForge contributors, GPL-2.0-or-later",
+    );
     props.u32MajorVersion = 1;
     props.u32MinorVersion = 0;
     props.u32MinInputConnections = 1;
@@ -302,8 +319,8 @@ unsafe extern "system" fn apo_initialize(
         if cb_size >= std::mem::size_of::<APOInitSystemEffects>() as u32 {
             let init = &*(data as *const APOInitSystemEffects);
             if let Some(store) = init.pAPOEndpointProperties.as_ref() {
-                if let Ok(value) =
-                    store.GetValue(&windows::Win32::Devices::FunctionDiscovery::PKEY_Device_FriendlyName)
+                if let Ok(value) = store
+                    .GetValue(&windows::Win32::Devices::FunctionDiscovery::PKEY_Device_FriendlyName)
                 {
                     if let Ok(text) = PropVariantToStringAlloc(&value) {
                         if let Ok(name) = text.to_string() {
@@ -499,7 +516,13 @@ unsafe extern "system" fn cfg_lock_for_process(
     num_out: u32,
     outputs: *const *const APO_CONNECTION_DESCRIPTOR,
 ) -> HRESULT {
-    lock_for_process(owner(this) as *mut ApoObject as *mut c_void, num_in, inputs, num_out, outputs)
+    lock_for_process(
+        owner(this) as *mut ApoObject as *mut c_void,
+        num_in,
+        inputs,
+        num_out,
+        outputs,
+    )
 }
 
 unsafe extern "system" fn cfg_unlock_for_process(this: *mut c_void) -> HRESULT {
@@ -529,7 +552,13 @@ unsafe extern "system" fn rt_apo_process(
     num_out: u32,
     outputs: *mut *mut APO_CONNECTION_PROPERTY,
 ) {
-    apo_process(owner(this) as *mut ApoObject as *mut c_void, num_in, inputs, num_out, outputs)
+    apo_process(
+        owner(this) as *mut ApoObject as *mut c_void,
+        num_in,
+        inputs,
+        num_out,
+        outputs,
+    )
 }
 
 static APO_VTBL: ApoVtbl = ApoVtbl {
@@ -568,11 +597,16 @@ static RT_VTBL: RtVtbl = RtVtbl {
 
 #[repr(C)]
 struct FactoryVtbl {
-    query_interface: unsafe extern "system" fn(*mut c_void, *const GUID, *mut *mut c_void) -> HRESULT,
+    query_interface:
+        unsafe extern "system" fn(*mut c_void, *const GUID, *mut *mut c_void) -> HRESULT,
     add_ref: unsafe extern "system" fn(*mut c_void) -> u32,
     release: unsafe extern "system" fn(*mut c_void) -> u32,
-    create_instance:
-        unsafe extern "system" fn(*mut c_void, *mut c_void, *const GUID, *mut *mut c_void) -> HRESULT,
+    create_instance: unsafe extern "system" fn(
+        *mut c_void,
+        *mut c_void,
+        *const GUID,
+        *mut *mut c_void,
+    ) -> HRESULT,
     lock_server: unsafe extern "system" fn(*mut c_void, i32) -> HRESULT,
 }
 
@@ -651,7 +685,9 @@ struct Factory {
 
 unsafe impl Sync for Factory {}
 
-static FACTORY: Factory = Factory { vtbl: &FACTORY_VTBL };
+static FACTORY: Factory = Factory {
+    vtbl: &FACTORY_VTBL,
+};
 
 // ---------------------------------------------------------------------------
 // DLL exports

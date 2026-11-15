@@ -6,7 +6,12 @@ use crate::dsp::mixer::{MixAssignment, MixTerm};
 /// Turns `50,0` into `50.0`, leaving other tokens untouched.
 pub fn normalize_number(token: &str) -> String {
     let cleaned = token.trim();
-    if cleaned.contains(',') && !cleaned.contains('.') && cleaned.chars().all(|c| c.is_ascii_digit() || c == ',' || c == '-' || c == '+') {
+    if cleaned.contains(',')
+        && !cleaned.contains('.')
+        && cleaned
+            .chars()
+            .all(|c| c.is_ascii_digit() || c == ',' || c == '-' || c == '+')
+    {
         cleaned.replace(',', ".")
     } else {
         cleaned.to_string()
@@ -126,7 +131,11 @@ pub fn parse_filter(params: &str) -> Result<FilterCommand, String> {
                     }
                 }
             }
-            cmd.kind = if is_low { FilterKind::LowShelfSlope } else { FilterKind::HighShelfSlope };
+            cmd.kind = if is_low {
+                FilterKind::LowShelfSlope
+            } else {
+                FilterKind::HighShelfSlope
+            };
         }
         "IIR" => {
             cmd.kind = FilterKind::None;
@@ -156,7 +165,9 @@ pub fn parse_filter(params: &str) -> Result<FilterCommand, String> {
                     i += 1;
                 }
             }
-            let order = cmd.order.ok_or_else(|| "IIR filter without order".to_string())?;
+            let order = cmd
+                .order
+                .ok_or_else(|| "IIR filter without order".to_string())?;
             let coeffs = cmd.coefficients.clone().unwrap_or_default();
             if coeffs.len() != 2 * (order + 1) {
                 return Err(format!(
@@ -185,7 +196,11 @@ pub fn parse_filter(params: &str) -> Result<FilterCommand, String> {
                     .and_then(|t| parse_f64(t))
                     .ok_or_else(|| "missing filter frequency".to_string())?;
                 i += 1;
-                if tokens.get(i).map(|t| t.eq_ignore_ascii_case("Hz")).unwrap_or(false) {
+                if tokens
+                    .get(i)
+                    .map(|t| t.eq_ignore_ascii_case("Hz"))
+                    .unwrap_or(false)
+                {
                     i += 1;
                 }
             }
@@ -196,7 +211,11 @@ pub fn parse_filter(params: &str) -> Result<FilterCommand, String> {
                     .and_then(|t| parse_f64(t))
                     .ok_or_else(|| "missing filter gain".to_string())?;
                 i += 1;
-                if tokens.get(i).map(|t| t.eq_ignore_ascii_case("dB")).unwrap_or(false) {
+                if tokens
+                    .get(i)
+                    .map(|t| t.eq_ignore_ascii_case("dB"))
+                    .unwrap_or(false)
+                {
                     i += 1;
                 }
             }
@@ -211,7 +230,11 @@ pub fn parse_filter(params: &str) -> Result<FilterCommand, String> {
             }
             "BW" => {
                 i += 1;
-                if tokens.get(i).map(|t| t.eq_ignore_ascii_case("Oct")).unwrap_or(false) {
+                if tokens
+                    .get(i)
+                    .map(|t| t.eq_ignore_ascii_case("Oct"))
+                    .unwrap_or(false)
+                {
                     i += 1;
                 }
                 let bw = tokens
@@ -225,11 +248,19 @@ pub fn parse_filter(params: &str) -> Result<FilterCommand, String> {
                 // `T60 target 100 ms` is accepted and ignored: the reference
                 // implementation also ignores the modal decay target.
                 i += 1;
-                if tokens.get(i).map(|t| t.eq_ignore_ascii_case("target")).unwrap_or(false) {
+                if tokens
+                    .get(i)
+                    .map(|t| t.eq_ignore_ascii_case("target"))
+                    .unwrap_or(false)
+                {
                     i += 1;
                 }
                 i += 1;
-                if tokens.get(i).map(|t| t.eq_ignore_ascii_case("ms")).unwrap_or(false) {
+                if tokens
+                    .get(i)
+                    .map(|t| t.eq_ignore_ascii_case("ms"))
+                    .unwrap_or(false)
+                {
                     i += 1;
                 }
             }
@@ -333,10 +364,15 @@ pub fn parse_copy(params: &str) -> Result<Vec<CopyCommand>, String> {
             .split_once('=')
             .ok_or_else(|| format!("copy assignment '{assignment}' has no '='"))?;
         if target.is_empty() {
-            return Err(format!("copy assignment '{assignment}' has no target channel"));
+            return Err(format!(
+                "copy assignment '{assignment}' has no target channel"
+            ));
         }
         let terms = parse_copy_expression(expr).map_err(|e| format!("in '{assignment}': {e}"))?;
-        out.push(CopyCommand { target: target.to_string(), terms });
+        out.push(CopyCommand {
+            target: target.to_string(),
+            terms,
+        });
     }
     if out.is_empty() {
         return Err("empty copy command".into());
@@ -377,13 +413,18 @@ fn parse_copy_expression(expr: &str) -> Result<Vec<CopyTerm>, String> {
                 let trimmed = factor.trim().to_lowercase();
                 let gain = if let Some(db) = trimmed.strip_suffix("db") {
                     // `-6dB` means a gain of -6 dB, not a negative linear factor.
-                    let value = parse_f64(db.trim()).ok_or_else(|| format!("bad gain '{factor}'"))?;
+                    let value =
+                        parse_f64(db.trim()).ok_or_else(|| format!("bad gain '{factor}'"))?;
                     (10f64.powf(sign as f64 * value / 20.0)) as f32
                 } else {
                     let value = parse_gain(factor).ok_or_else(|| format!("bad gain '{factor}'"))?;
                     sign * value
                 };
-                let signed = if trimmed.ends_with("db") { 1.0f32 } else { 1.0f32 };
+                let signed = if trimmed.ends_with("db") {
+                    1.0f32
+                } else {
+                    1.0f32
+                };
                 (gain * signed, source)
             }
             None => (sign * 1.0f32, body.as_str()),
@@ -392,7 +433,11 @@ fn parse_copy_expression(expr: &str) -> Result<Vec<CopyTerm>, String> {
         let looks_constant = source.contains('.') && parse_f64(source).is_some();
         if looks_constant {
             let constant = parse_f64(source).unwrap_or(0.0) as f32;
-            terms.push(CopyTerm { gain: sign * factor, source: None, constant });
+            terms.push(CopyTerm {
+                gain: sign * factor,
+                source: None,
+                constant,
+            });
         } else {
             terms.push(CopyTerm {
                 gain: sign * factor,
@@ -412,15 +457,25 @@ pub fn resolve_copy(
     cmd: &CopyCommand,
     resolve: impl Fn(&str) -> Option<usize>,
 ) -> Result<MixAssignment, String> {
-    let target = resolve(&cmd.target).ok_or_else(|| format!("unknown target channel '{}'", cmd.target))?;
+    let target =
+        resolve(&cmd.target).ok_or_else(|| format!("unknown target channel '{}'", cmd.target))?;
     let mut terms = Vec::new();
     for term in &cmd.terms {
         match &term.source {
             Some(name) => {
-                let idx = resolve(name).ok_or_else(|| format!("unknown source channel '{name}'"))?;
-                terms.push(MixTerm { gain: term.gain, source: Some(idx), constant: 0.0 });
+                let idx =
+                    resolve(name).ok_or_else(|| format!("unknown source channel '{name}'"))?;
+                terms.push(MixTerm {
+                    gain: term.gain,
+                    source: Some(idx),
+                    constant: 0.0,
+                });
             }
-            None => terms.push(MixTerm { gain: term.gain, source: None, constant: term.constant }),
+            None => terms.push(MixTerm {
+                gain: term.gain,
+                source: None,
+                constant: term.constant,
+            }),
         }
     }
     Ok(MixAssignment { target, terms })
@@ -445,7 +500,12 @@ mod tests {
         let cmd = parse_filter("ON HP Fc 30 Hz").unwrap();
         assert_eq!(cmd.kind, FilterKind::HighPass);
         assert_eq!(cmd.freq, 30.0);
-        let cmd = parse_filter("Filter: ON LS 6dB Fc 50.0 Hz Gain 7.2 dB".trim_start_matches("Filter: ").trim()).unwrap();
+        let cmd = parse_filter(
+            "Filter: ON LS 6dB Fc 50.0 Hz Gain 7.2 dB"
+                .trim_start_matches("Filter: ")
+                .trim(),
+        )
+        .unwrap();
         assert_eq!(cmd.kind, FilterKind::LowShelf6);
         assert_eq!(cmd.slope, 6.0);
     }
@@ -478,7 +538,10 @@ mod tests {
 
     #[test]
     fn parses_generic_iir() {
-        let cmd = parse_filter("ON IIR Order 2 Coefficients 0.0380602 0.0761205 0.0380602 1.2706 -1.84776 0.729402").unwrap();
+        let cmd = parse_filter(
+            "ON IIR Order 2 Coefficients 0.0380602 0.0761205 0.0380602 1.2706 -1.84776 0.729402",
+        )
+        .unwrap();
         assert_eq!(cmd.order, Some(2));
         assert_eq!(cmd.coefficients.as_ref().unwrap().len(), 6);
     }
@@ -497,7 +560,9 @@ mod tests {
 
     #[test]
     fn modal_filter_with_t60_target() {
-        let cmd = parse_filter("ON  Modal    Fc     100 Hz  Gain   3.0 dB  Q  5.41  T60 target   100 ms").unwrap();
+        let cmd =
+            parse_filter("ON  Modal    Fc     100 Hz  Gain   3.0 dB  Q  5.41  T60 target   100 ms")
+                .unwrap();
         assert_eq!(cmd.kind, FilterKind::Peak);
         assert_eq!(cmd.freq, 100.0);
         assert_eq!(cmd.gain_db, 3.0);
@@ -506,13 +571,22 @@ mod tests {
     #[test]
     fn parses_graphic_eq_bands() {
         let pts = parse_graphic_eq("25 0; 40 0; 63 0; 100 0").unwrap();
-        assert_eq!(pts, vec![(25.0, 0.0), (40.0, 0.0), (63.0, 0.0), (100.0, 0.0)]);
+        assert_eq!(
+            pts,
+            vec![(25.0, 0.0), (40.0, 0.0), (63.0, 0.0), (100.0, 0.0)]
+        );
     }
 
     #[test]
     fn parses_delay_in_both_units() {
-        assert_eq!(parse_delay("50.5 ms").unwrap(), DelayCommand::Milliseconds(50.5));
-        assert_eq!(parse_delay("480 samples").unwrap(), DelayCommand::Samples(480));
+        assert_eq!(
+            parse_delay("50.5 ms").unwrap(),
+            DelayCommand::Milliseconds(50.5)
+        );
+        assert_eq!(
+            parse_delay("480 samples").unwrap(),
+            DelayCommand::Samples(480)
+        );
         assert_eq!(parse_delay("50.5").unwrap().to_samples(48000), 50.5 * 48.0);
     }
 

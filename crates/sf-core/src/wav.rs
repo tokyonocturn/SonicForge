@@ -123,7 +123,8 @@ pub fn parse_wave(data: &[u8]) -> Result<WaveAudio, WavError> {
         pos = body_start + size + (size & 1);
     }
 
-    let (tag, channels, rate, bits) = fmt.ok_or_else(|| WavError::Invalid("missing fmt chunk".into()))?;
+    let (tag, channels, rate, bits) =
+        fmt.ok_or_else(|| WavError::Invalid("missing fmt chunk".into()))?;
     let payload = payload.ok_or_else(|| WavError::Invalid("missing data chunk".into()))?;
     if channels == 0 {
         return Err(WavError::Invalid("zero channels".into()));
@@ -148,10 +149,14 @@ pub fn parse_wave(data: &[u8]) -> Result<WaveAudio, WavError> {
             (1, 8) => (chunk[0] as f32 - 128.0) / 128.0,
             (1, 16) => i16::from_le_bytes([chunk[0], chunk[1]]) as f32 / 32768.0,
             (1, 24) => {
-                let v = ((chunk[2] as i32) << 24 | (chunk[1] as i32) << 16 | (chunk[0] as i32) << 8) >> 8;
+                let v =
+                    ((chunk[2] as i32) << 24 | (chunk[1] as i32) << 16 | (chunk[0] as i32) << 8)
+                        >> 8;
                 v as f32 / 8388608.0
             }
-            (1, 32) => i32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]) as f32 / 2147483648.0,
+            (1, 32) => {
+                i32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]) as f32 / 2147483648.0
+            }
             (3, 32) => f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]),
             (3, 64) => f64::from_le_bytes([
                 chunk[0], chunk[1], chunk[2], chunk[3], chunk[4], chunk[5], chunk[6], chunk[7],
@@ -168,7 +173,10 @@ pub fn parse_wave(data: &[u8]) -> Result<WaveAudio, WavError> {
         }
     };
 
-    let supported = matches!((tag, bits), (1, 8) | (1, 16) | (1, 24) | (1, 32) | (3, 32) | (3, 64));
+    let supported = matches!(
+        (tag, bits),
+        (1, 8) | (1, 16) | (1, 24) | (1, 32) | (3, 32) | (3, 64)
+    );
     if !supported {
         return Err(WavError::Unsupported(format!(
             "format tag {tag} with {bits} bits per sample"
@@ -183,7 +191,10 @@ pub fn parse_wave(data: &[u8]) -> Result<WaveAudio, WavError> {
         }
     }
 
-    Ok(WaveAudio { sample_rate: rate, channels: out })
+    Ok(WaveAudio {
+        sample_rate: rate,
+        channels: out,
+    })
 }
 
 /// Writes 32-bit float WAVE data. Used by tests and the diagnostics exporter.

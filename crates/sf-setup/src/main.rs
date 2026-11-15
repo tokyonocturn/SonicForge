@@ -42,11 +42,16 @@ mod windows_impl {
     }
 
     fn arg_value(args: &[String], flag: &str) -> Option<String> {
-        args.iter().position(|a| a == flag).and_then(|i| args.get(i + 1)).cloned()
+        args.iter()
+            .position(|a| a == flag)
+            .and_then(|i| args.get(i + 1))
+            .cloned()
     }
 
     fn install(args: &[String]) -> Result<ExitCode, String> {
-        let target = arg_value(args, "--dir").map(PathBuf::from).unwrap_or_else(install_dir);
+        let target = arg_value(args, "--dir")
+            .map(PathBuf::from)
+            .unwrap_or_else(install_dir);
         let enable = !args.iter().any(|a| a == "--no-enable");
         let source = source_dir()?;
         std::fs::create_dir_all(&target)
@@ -63,7 +68,10 @@ mod windows_impl {
             let from = source.join(name);
             if !from.exists() {
                 if name == "SonicForgeAPO.dll" {
-                    return Err(format!("'{}' is missing; build the workspace first", from.display()));
+                    return Err(format!(
+                        "'{}' is missing; build the workspace first",
+                        from.display()
+                    ));
                 }
                 println!("skipping missing {name}");
                 continue;
@@ -109,13 +117,18 @@ mod windows_impl {
         }
 
         println!("\nInstalled to {}", target.display());
-        println!("Start the editor: {}", target.join("sonicforge-editor.exe").display());
+        println!(
+            "Start the editor: {}",
+            target.join("sonicforge-editor.exe").display()
+        );
         println!("Restart playback (or the Windows Audio service) so the effect is loaded.");
         Ok(ExitCode::SUCCESS)
     }
 
     fn uninstall(args: &[String]) -> Result<ExitCode, String> {
-        let target = arg_value(args, "--dir").map(PathBuf::from).unwrap_or_else(install_dir);
+        let target = arg_value(args, "--dir")
+            .map(PathBuf::from)
+            .unwrap_or_else(install_dir);
         if let Ok(list) = endpoints::list(Flow::Render) {
             for endpoint in &list {
                 if let Err(e) = sf_win::apo::disable_endpoint(endpoint) {
@@ -146,7 +159,10 @@ mod windows_impl {
             }
         }
         let _ = std::fs::remove_dir(&target);
-        println!("SonicForge removed. Your configuration and presets were kept in {}", sf_win::paths::config_dir().display());
+        println!(
+            "SonicForge removed. Your configuration and presets were kept in {}",
+            sf_win::paths::config_dir().display()
+        );
         Ok(ExitCode::SUCCESS)
     }
 
@@ -157,18 +173,12 @@ mod windows_impl {
             ("DisplayVersion", sf_core::VERSION.to_string()),
             ("Publisher", "SonicForge contributors".to_string()),
             ("InstallLocation", target.display().to_string()),
-            (
-                "UninstallString",
-                format!("sf-setup.exe uninstall"),
-            ),
+            ("UninstallString", format!("sf-setup.exe uninstall")),
             ("NoModify", "1".to_string()),
         ];
         let _ = uninstaller;
         write_values(UNINSTALL_KEY, &entry)?;
-        write_values(
-            APP_KEY,
-            &[("InstallPath", target.display().to_string())],
-        )
+        write_values(APP_KEY, &[("InstallPath", target.display().to_string())])
     }
 
     fn write_values(path: &str, values: &[(&str, String)]) -> Result<(), String> {
@@ -202,9 +212,8 @@ mod windows_impl {
             let key = wide(name);
             let text = wide(value);
             let bytes: Vec<u8> = text.iter().flat_map(|u| u.to_le_bytes()).collect();
-            let status = unsafe {
-                RegSetValueExW(handle, PCWSTR(key.as_ptr()), 0, REG_SZ, Some(&bytes))
-            };
+            let status =
+                unsafe { RegSetValueExW(handle, PCWSTR(key.as_ptr()), 0, REG_SZ, Some(&bytes)) };
             if status.0 != 0 {
                 unsafe {
                     let _ = RegCloseKey(handle);
@@ -213,8 +222,8 @@ mod windows_impl {
             }
         }
         unsafe {
-                    let _ = RegCloseKey(handle);
-                }
+            let _ = RegCloseKey(handle);
+        }
         Ok(())
     }
 

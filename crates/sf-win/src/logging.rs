@@ -22,7 +22,9 @@ struct Logger {
 }
 
 fn timestamp() -> String {
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default();
     let secs = now.as_secs();
     // Convert to a readable UTC timestamp without pulling in a date crate.
     let days = secs / 86_400;
@@ -86,9 +88,17 @@ fn write(level: &str, message: &str) {
             let _ = logger.file.flush();
             logger.size += line.len() as u64;
             if logger.size > MAX_SIZE {
-                let dir = logger.path.parent().map(|p| p.to_path_buf()).unwrap_or_default();
+                let dir = logger
+                    .path
+                    .parent()
+                    .map(|p| p.to_path_buf())
+                    .unwrap_or_default();
                 let _ = std::fs::rename(&logger.path, dir.join("sonicforge.old.log"));
-                if let Ok(file) = OpenOptions::new().create(true).append(true).open(&logger.path) {
+                if let Ok(file) = OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(&logger.path)
+                {
                     logger.file = file;
                     logger.size = 0;
                 }

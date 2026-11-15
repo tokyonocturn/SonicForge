@@ -22,15 +22,33 @@ pub struct PresetBand {
 
 impl PresetBand {
     pub fn peak(freq: f64, gain_db: f64, q: f64) -> Self {
-        Self { enabled: true, kind: FilterKind::Peak, freq, gain_db, q }
+        Self {
+            enabled: true,
+            kind: FilterKind::Peak,
+            freq,
+            gain_db,
+            q,
+        }
     }
 
     pub fn low_shelf(freq: f64, gain_db: f64, q: f64) -> Self {
-        Self { enabled: true, kind: FilterKind::LowShelf12, freq, gain_db, q }
+        Self {
+            enabled: true,
+            kind: FilterKind::LowShelf12,
+            freq,
+            gain_db,
+            q,
+        }
     }
 
     pub fn high_shelf(freq: f64, gain_db: f64, q: f64) -> Self {
-        Self { enabled: true, kind: FilterKind::HighShelf12, freq, gain_db, q }
+        Self {
+            enabled: true,
+            kind: FilterKind::HighShelf12,
+            freq,
+            gain_db,
+            q,
+        }
     }
 
     /// Renders the band as a `Filter:` line.
@@ -47,7 +65,10 @@ impl PresetBand {
             FilterKind::Notch => "NO ".to_string(),
             other => format!("{} ", other.name()),
         };
-        let mut line = format!("Filter {:>2}: {state} {type_name}Fc {:>8.1} Hz", index, self.freq);
+        let mut line = format!(
+            "Filter {:>2}: {state} {type_name}Fc {:>8.1} Hz",
+            index, self.freq
+        );
         if self.kind.uses_gain() || self.gain_db != 0.0 {
             line.push_str(&format!(" Gain {:>6.1} dB", self.gain_db));
         }
@@ -69,13 +90,23 @@ pub struct Preset {
 
 impl Default for Preset {
     fn default() -> Self {
-        Self { name: "Untitled".into(), description: String::new(), preamp_db: 0.0, bands: Vec::new() }
+        Self {
+            name: "Untitled".into(),
+            description: String::new(),
+            preamp_db: 0.0,
+            bands: Vec::new(),
+        }
     }
 }
 
 impl Preset {
     pub fn new(name: impl Into<String>, preamp_db: f64, bands: Vec<PresetBand>) -> Self {
-        Self { name: name.into(), description: String::new(), preamp_db, bands }
+        Self {
+            name: name.into(),
+            description: String::new(),
+            preamp_db,
+            bands,
+        }
     }
 
     /// Renders the preset as a complete configuration file.
@@ -106,7 +137,12 @@ impl Preset {
         for line in &doc.lines {
             match line.command {
                 Command::Preamp => {
-                    if let Some(v) = line.params.split_whitespace().next().and_then(super::filter::parse_f64) {
+                    if let Some(v) = line
+                        .params
+                        .split_whitespace()
+                        .next()
+                        .and_then(super::filter::parse_f64)
+                    {
                         preset.preamp_db += v;
                     }
                 }
@@ -230,7 +266,10 @@ mod tests {
 
     #[test]
     fn preset_renders_parsable_configuration() {
-        let preset = builtin_presets().into_iter().find(|p| p.name == "Bass Boost").unwrap();
+        let preset = builtin_presets()
+            .into_iter()
+            .find(|p| p.name == "Bass Boost")
+            .unwrap();
         let text = preset.to_config_text();
         let doc = Document::parse(&text);
         assert_eq!(doc.lines.len(), 1 + preset.bands.len());
@@ -257,7 +296,10 @@ mod tests {
         let preset = Preset::new(
             "t",
             0.0,
-            vec![PresetBand::peak(100.0, 6.0, 1.0), PresetBand::peak(1000.0, 2.0, 1.0)],
+            vec![
+                PresetBand::peak(100.0, 6.0, 1.0),
+                PresetBand::peak(1000.0, 2.0, 1.0),
+            ],
         );
         assert_eq!(preset.suggested_preamp(), -6.0);
     }
