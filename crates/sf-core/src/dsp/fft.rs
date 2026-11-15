@@ -121,8 +121,8 @@ impl Fft {
 
     fn transform(&self, buf: &mut [Complex64], inverse: bool) {
         let n = self.n;
-        for i in 0..n {
-            let j = self.rev[i] as usize;
+        for (i, &reversed) in self.rev.iter().enumerate().take(n) {
+            let j = reversed as usize;
             if i < j {
                 buf.swap(i, j);
             }

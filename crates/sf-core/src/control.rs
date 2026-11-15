@@ -9,9 +9,6 @@
 /// Name of the shared memory object. `Local\` scopes it to the session.
 pub const SHARED_NAME: &str = "Local\\SonicForgeControl";
 
-const MAGIC: u32 = 0x5346_4F52; // "SFOR"
-const VERSION: u32 = 1;
-
 /// Point in time snapshot of the control block.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct ControlSnapshot {
@@ -33,6 +30,9 @@ pub struct ControlSnapshot {
 mod platform {
     use super::*;
     use std::ffi::OsStr;
+
+    const MAGIC: u32 = 0x5346_4F52; // "SFOR"
+    const VERSION: u32 = 1;
     use std::os::windows::ffi::OsStrExt;
     use windows_sys::Win32::Foundation::{CloseHandle, HANDLE, INVALID_HANDLE_VALUE};
     use windows_sys::Win32::System::Memory::{
